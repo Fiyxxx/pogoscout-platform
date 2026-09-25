@@ -10,6 +10,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { CellPage } from './pages/CellPage'
 import { MissionPage } from './pages/MissionPage'
 import { MissionsPage } from './pages/MissionsPage'
+import { ModelPage } from './pages/ModelPage'
 import { WorldPage } from './pages/WorldPage'
 import { installViewportScale } from './lib/viewportScale'
 
@@ -22,6 +23,7 @@ const queryClient = new QueryClient({
 const router = createBrowserRouter([
   { path: '/', element: <WorldPage /> },
   { path: '/missions', element: <MissionsPage /> },
+  { path: '/3d', element: <ModelPage /> },
   { path: '/missions/:missionId', element: <MissionPage /> },
   { path: '/missions/:missionId/cells/:x/:y', element: <CellPage /> },
 ])

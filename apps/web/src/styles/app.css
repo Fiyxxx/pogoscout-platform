@@ -96,3 +96,22 @@ input::placeholder { color: var(--faint); }
 .maplibregl-ctrl-group button + button { border-top: 1px solid var(--line-strong) !important; }
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
 .maplibregl-ctrl-group button:hover { background: var(--hover) !important; }
+
+/* 3D showcase: ink on paper */
+.model-page { --m-paper: #f4f4f1; --m-ink: #151515; --m-muted: #6b6b66; --m-line: #d9d9d4; background: var(--m-paper); color: var(--m-ink); }
+.model-panel { position: absolute; background: rgba(255, 255, 255, 0.92); border: 1px solid var(--m-line); backdrop-filter: blur(6px); }
+.model-part { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: none; background: transparent; color: var(--m-ink); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 0.15s ease; }
+.model-part:hover, .model-part[data-hover='true'] { background: #efefeb; }
+.model-part[data-active='true'] { background: var(--m-ink); color: #ffffff; }
+.model-variant { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; border: 1px solid var(--m-line); background: #ffffff; color: var(--m-ink); transition: border-color 0.15s ease; }
+.model-variant:hover { border-color: var(--m-ink); }
+.model-variant[data-fitted='true'] { border-color: var(--signal); }
+.model-close { width: 30px; height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--m-line); background: #ffffff; color: var(--m-ink); }
+.model-seg { display: flex; border: 1px solid var(--m-line); }
+.model-seg button, .model-btn { height: 38px; padding: 0 16px; border: none; background: #ffffff; color: var(--m-ink); font-size: 13px; font-weight: 500; }
+.model-btn { border: 1px solid var(--m-line); }
+.model-seg button[aria-pressed='true'], .model-btn[aria-pressed='true'] { background: var(--m-ink); color: #ffffff; }
+.model-label { display: flex; gap: 6px; align-items: baseline; font: 500 12px var(--font-ui); color: #151515; background: rgba(255, 255, 255, 0.85); padding: 2px 6px; border: 1px solid #d9d9d4; transition: opacity 0.3s ease; white-space: nowrap; }
+.model-label .num { font-family: var(--font-mono); font-size: 10px; color: #6b6b66; }
+.model-label[data-selected='true'] { border-color: #ff5a1f; }
+.model-label[data-selected='true'] .num { color: #ff5a1f; }
