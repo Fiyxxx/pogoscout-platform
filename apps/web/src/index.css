@@ -1,0 +1,26 @@
+:root {
+  --bg: #0e1113;
+  --panel: #161a1d;
+  --border: #262c31;
+  --text: #d8dee3;
+  --muted: #7c8790;
+  --ok: #4caf7a;
+  --warn: #e0a84a;
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+.shell {
+  display: grid;
+  height: 100vh;
+  grid-template: 'top top top' 48px 'layers map inspector' 1fr 'timeline timeline timeline' 96px / 220px 1fr 340px;
+}
+.shell > * { border: 1px solid var(--border); background: var(--panel); padding: 12px; }
+.topbar { grid-area: top; display: flex; gap: 16px; align-items: center; }
+.layers { grid-area: layers; }
+.map { grid-area: map; background: var(--bg); }
+.inspector { grid-area: inspector; }
+.timeline { grid-area: timeline; }
+.status { color: var(--muted); font-size: 13px; }
+.status[data-state='ok'] { color: var(--ok); }
