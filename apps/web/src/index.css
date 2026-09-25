@@ -24,3 +24,46 @@ body { margin: 0; background: var(--bg); color: var(--text); }
 .timeline { grid-area: timeline; }
 .status { color: var(--muted); font-size: 13px; }
 .status[data-state='ok'] { color: var(--ok); }
+:root {
+  --metal: #e0a84a;
+  --voc: #5fb3d9;
+  --error: #d9534f;
+  --path: #9fb4c2;
+  --cell: #2a3238;
+  --cell-selected: #50606b;
+}
+h2, h3 { margin: 8px 0; font-size: 15px; }
+.muted { color: var(--muted); font-size: 13px; }
+.error { color: var(--error); }
+.map { display: flex; align-items: center; justify-content: center; overflow: auto; }
+.grid-map { max-width: 100%; max-height: 100%; }
+.grid-bg { fill: none; stroke: var(--border); stroke-width: 1; }
+.cell { cursor: pointer; }
+.cell > rect { fill: var(--cell); }
+.cell[data-selected='true'] > rect { fill: var(--cell-selected); stroke: var(--text); stroke-width: 2; }
+.cell:focus-visible { outline: none; }
+.cell:focus-visible > rect { stroke: var(--text); stroke-width: 2; }
+.badge[data-kind='metal'][data-state='detected'] { fill: var(--metal); }
+.badge[data-kind='voc'][data-state='detected'] { fill: var(--voc); }
+.badge[data-state='sensor_error'], .badge[data-state='missing'] { fill: none; stroke: var(--error); stroke-width: 2; stroke-dasharray: 2 2; }
+.visits { fill: var(--text); font-size: 10px; text-anchor: end; }
+.path { fill: none; stroke: var(--path); stroke-width: 2; stroke-opacity: 0.6; pointer-events: none; }
+.origin { fill: var(--muted); pointer-events: none; }
+.current { fill: none; stroke: #fff; stroke-width: 3; pointer-events: none; }
+.mission-picker { display: flex; gap: 8px; }
+.mission-picker form { display: flex; gap: 4px; }
+select, input, button { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font: inherit; font-size: 13px; }
+button { cursor: pointer; }
+.topbar .status { margin-left: auto; }
+.legend { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; font-size: 13px; }
+.swatch { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: middle; }
+.swatch.metal { background: var(--metal); border-radius: 50%; }
+.swatch.voc { background: var(--voc); transform: rotate(45deg); }
+.swatch.error { border: 2px dashed var(--error); border-radius: 50%; }
+.swatch.current { border: 3px solid #fff; border-radius: 50%; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.sensor-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); }
+.sensor-badge[data-state='detected'] { border-color: var(--metal); }
+.sensor-badge[data-state='sensor_error'], .sensor-badge[data-state='missing'] { border-color: var(--error); border-style: dashed; }
+.visits-list { padding-left: 18px; font-size: 13px; display: grid; gap: 6px; }
+.inspector { overflow: auto; }

@@ -23,7 +23,22 @@ cd apps/api && uv sync && uv run pogoscout-api      # http://localhost:8000/docs
 
 # terminal 2
 cd apps/web && npm install && npm run dev           # http://localhost:5173
+
+# terminal 3: replay a fixture through the public API, then pick "demo-clean" in the UI
+cd apps/api && uv run pogoscout-dev load clean_baseline_v1 --mission-id demo-clean
 ```
+
+## Mock data
+
+Fixtures live in `fixtures/<scenario>/` (`scenario.json`, `expected_projection.json`, `images/`) and are generated deterministically from a seed:
+
+```bash
+cd apps/api
+uv run pogoscout-dev fixtures        # regenerate all fixtures
+uv run pogoscout-dev contracts       # export contracts/hop.v1.schema.json + taxonomy
+```
+
+Fixtures are only ever ingested through the public API. `tests/test_fixtures.py` replays each one and compares the result with `expected_projection.json`.
 
 ## Test
 

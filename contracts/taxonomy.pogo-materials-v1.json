@@ -1,0 +1,12 @@
+{
+  "taxonomy_version": "pogo-materials-v1",
+  "labels": [
+    "firm_soil",
+    "leaf_litter",
+    "mud",
+    "standing_water",
+    "root_or_wood",
+    "manmade_surface",
+    "unknown"
+  ]
+}

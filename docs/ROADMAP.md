@@ -27,16 +27,16 @@ The building blocks, in dependency order. Each milestone ends with a demoable sl
 - [x] Vite/React/TS skeleton (TanStack Query, Vitest) + dashboard layout shell
 
 ### M1 Core ingest → map
-- [ ] Contracts: hop schema, sensor `{value, status}`, movement `F/B/L/R` + `dx/dy`, taxonomy JSON
-- [ ] Domain: validation rules (0 vs null vs error), one-Manhattan-step rule
-- [ ] Persistence: `missions`, `hops` tables (append-only, canonical-content hash)
-- [ ] `POST/GET /missions`, `PUT/GET /missions/{id}/hops/{hop_id}` with idempotent duplicate + 409 conflict
-- [ ] Projection: coordinates from hop chain, pending on gaps, revisits keep all observations
-- [ ] `GET /missions/{id}/cells` with per-cell metal/VOC/visit state
-- [ ] Fixture generator script (seeded) + `clean_baseline_v1` (scenario, images, expected projection)
-- [ ] Fixture loader posts through the public API; golden test vs `expected_projection.json`
-- [ ] Frontend: mission picker/create, SVG grid (auto-fit), path, current position, metal/VOC badges, click-to-select cell
-- [ ] Tests: domain, API, projection, grid component
+- [x] Contracts: hop schema, sensor `{value, status}`, movement `F/B/L/R` + `dx/dy`, taxonomy JSON
+- [x] Domain: validation rules (0 vs null vs error), one-Manhattan-step rule
+- [x] Persistence: `missions`, `hops` tables (append-only, canonical-content hash)
+- [x] `POST/GET /missions`, `PUT/GET /missions/{id}/hops/{hop_id}` with idempotent duplicate + 409 conflict
+- [x] Projection: coordinates from hop chain, pending on gaps, revisits keep all observations
+- [x] `GET /missions/{id}/cells` with per-cell metal/VOC/visit state
+- [x] Fixture generator script (seeded) + `clean_baseline_v1` (scenario, images, expected projection)
+- [x] Fixture loader posts through the public API; golden test vs `expected_projection.json`
+- [x] Frontend: mission picker/create, SVG grid (auto-fit), path, current position, metal/VOC badges, click-to-select cell
+- [x] Tests: domain, API, projection, grid component
 
 ### M2 Replay & live
 - [ ] Replay engine: load scenario, cursor, `step` / `reset`

@@ -10,5 +10,5 @@ test('renders dashboard shell', () => {
     </QueryClientProvider>,
   )
   expect(screen.getByText('PogoScout')).toBeInTheDocument()
-  expect(screen.getByText('Cell inspector')).toBeInTheDocument()
+  expect(screen.getByText(/Select a cell/)).toBeInTheDocument()
 })

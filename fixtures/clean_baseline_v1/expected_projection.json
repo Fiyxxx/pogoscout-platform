@@ -1,0 +1,320 @@
+{
+  "scenario_id": "clean_baseline_v1",
+  "current": {
+    "x": 3,
+    "y": 1
+  },
+  "path": [
+    {
+      "hop_id": 1,
+      "x": 0,
+      "y": 1
+    },
+    {
+      "hop_id": 2,
+      "x": 0,
+      "y": 2
+    },
+    {
+      "hop_id": 3,
+      "x": 0,
+      "y": 3
+    },
+    {
+      "hop_id": 4,
+      "x": 0,
+      "y": 4
+    },
+    {
+      "hop_id": 5,
+      "x": 0,
+      "y": 5
+    },
+    {
+      "hop_id": 6,
+      "x": 1,
+      "y": 5
+    },
+    {
+      "hop_id": 7,
+      "x": 1,
+      "y": 4
+    },
+    {
+      "hop_id": 8,
+      "x": 1,
+      "y": 3
+    },
+    {
+      "hop_id": 9,
+      "x": 1,
+      "y": 2
+    },
+    {
+      "hop_id": 10,
+      "x": 1,
+      "y": 1
+    },
+    {
+      "hop_id": 11,
+      "x": 1,
+      "y": 0
+    },
+    {
+      "hop_id": 12,
+      "x": 2,
+      "y": 0
+    },
+    {
+      "hop_id": 13,
+      "x": 2,
+      "y": 1
+    },
+    {
+      "hop_id": 14,
+      "x": 2,
+      "y": 2
+    },
+    {
+      "hop_id": 15,
+      "x": 2,
+      "y": 3
+    },
+    {
+      "hop_id": 16,
+      "x": 2,
+      "y": 4
+    },
+    {
+      "hop_id": 17,
+      "x": 2,
+      "y": 5
+    },
+    {
+      "hop_id": 18,
+      "x": 3,
+      "y": 5
+    },
+    {
+      "hop_id": 19,
+      "x": 3,
+      "y": 4
+    },
+    {
+      "hop_id": 20,
+      "x": 3,
+      "y": 3
+    },
+    {
+      "hop_id": 21,
+      "x": 3,
+      "y": 2
+    },
+    {
+      "hop_id": 22,
+      "x": 3,
+      "y": 1
+    }
+  ],
+  "pending_hop_ids": [],
+  "cells": [
+    {
+      "x": 1,
+      "y": 0,
+      "hop_ids": [
+        11
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "hop_ids": [
+        12
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "hop_ids": [
+        1
+      ],
+      "metal": "not_detected",
+      "voc": "detected"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "hop_ids": [
+        10
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "hop_ids": [
+        13
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "hop_ids": [
+        22
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "hop_ids": [
+        2
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "hop_ids": [
+        9
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "hop_ids": [
+        14
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "hop_ids": [
+        21
+      ],
+      "metal": "detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "hop_ids": [
+        3
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "hop_ids": [
+        8
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "hop_ids": [
+        15
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "hop_ids": [
+        20
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "hop_ids": [
+        4
+      ],
+      "metal": "detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "hop_ids": [
+        7
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "hop_ids": [
+        16
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "hop_ids": [
+        19
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "hop_ids": [
+        5
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "hop_ids": [
+        6
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "hop_ids": [
+        17
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "hop_ids": [
+        18
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected"
+    }
+  ]
+}
