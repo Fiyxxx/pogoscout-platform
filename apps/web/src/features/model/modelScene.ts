@@ -12,6 +12,8 @@ const PAPER = 0xf4f4f1
 const INK = 0x151515
 const SIGNAL = 0xff5a1f
 const INK_WIDTH = 1.25
+// The scout rides high on a long pogo stick: everything above the leg sits this much higher.
+const LIFT = 2.2
 
 type Piece = { obj: THREE.Object3D; base: THREE.Vector3; explode: THREE.Vector3 }
 
@@ -87,7 +89,7 @@ export class ModelScene {
   private exploded = false
   private explodeT = 0
   private hopStart = -1
-  private focusDistance = 7
+  private focusDistance = 10
   // The camera glides to focusDistance only until this time, then zoom belongs to the user.
   private focusUntil = -1
   private raf = 0
@@ -111,9 +113,9 @@ export class ModelScene {
     this.labels.domElement.style.pointerEvents = 'none'
     container.appendChild(this.labels.domElement)
 
-    this.camera.position.set(4.6, 3.4, 5.2)
+    this.camera.position.set(6.4, 4.8, 7.4)
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
-    this.controls.target.set(0, 1, 0)
+    this.controls.target.set(0, 1.9, 0)
     this.controls.enableDamping = true
     this.controls.dampingFactor = 0.08
     this.controls.minDistance = 2
@@ -165,7 +167,7 @@ export class ModelScene {
   select(id: PartId | null) {
     this.selected = id
     if (id) this.exploded = true
-    this.focusDistance = id ? 6.2 : 7
+    this.focusDistance = id ? 8 : 10
     this.focusUntil = this.clock.elapsedTime + 1.4
     this.paint()
   }
@@ -212,6 +214,7 @@ export class ModelScene {
   private newPart(id: PartId): PartBuild {
     const group = new THREE.Group()
     group.userData.part = id
+    if (id !== 'leg' && id !== 'metal') group.position.y = LIFT
     this.root.add(group)
     const index = PARTS.findIndex((p) => p.id === id)
     const el = document.createElement('div')
@@ -362,24 +365,29 @@ export class ModelScene {
     // guide rollers, rod with coil spring and a ball foot.
     const leg = this.newPart('leg')
     const L = new THREE.Group()
-    L.add(this.solid(leg, box(0.62, 0.03, 0.46), [0, 1.005, 0]))
-    L.add(this.solid(leg, box(0.56, 0.025, 0.42), [0, 0.978, 0]))
-    for (const [x, z] of [[-0.2, -0.15], [0.2, -0.15], [-0.2, 0.15], [0.2, 0.15]]) L.add(this.slot(leg, x, 0.964, z, 0.06, 0.018))
-    for (const s of [-1, 1]) L.add(this.solid(leg, box(0.03, 0.3, 0.28), [s * 0.135, 0.815, 0]))
-    L.add(this.solid(leg, box(0.24, 0.2, 0.2), [0, 0.8, 0]))
-    L.add(this.solid(leg, box(0.2, 0.15, 0.014), [0, 0.81, 0.107]))
-    for (const [x, y] of [[-0.075, 0.865], [0.075, 0.865], [-0.075, 0.755], [0.075, 0.755]]) L.add(this.screw(leg, [x, y, 0.118], 'z', 0.014))
-    L.add(this.outline(leg, [[-0.05, 0.79, 0.1145], [0.03, 0.79, 0.1145], [0.03, 0.83, 0.1145], [-0.05, 0.83, 0.1145]]))
-    L.add(this.solid(leg, box(0.36, 0.025, 0.05), [0, 0.92, 0.13]))
-    for (const s of [-1, 1]) L.add(this.solid(leg, box(0.025, 0.24, 0.05), [s * 0.17, 0.81, 0.13]))
-    L.add(this.solid(leg, box(0.05, 0.02, 0.46), [0.17, 0.92, 0.37]))
-    for (const x of [-0.05, 0.05]) for (const z of [-0.06, 0.06]) L.add(this.solid(leg, cyl(0.035, 0.05, 12), [x, 0.67, z], [0, 0, Math.PI / 2], 1))
-    L.add(this.solid(leg, cyl(0.032, 0.56, 10), [0, 0.39, 0], [0, 0, 0], 1))
-    L.add(this.solid(leg, cyl(0.07, 0.03, 14), [0, 0.64, 0], [0, 0, 0], 1))
-    const turns = 11
+    const head = new THREE.Group()
+    head.position.y = LIFT
+    L.add(head)
+    head.add(this.solid(leg, box(0.62, 0.03, 0.46), [0, 1.005, 0]))
+    head.add(this.solid(leg, box(0.56, 0.025, 0.42), [0, 0.978, 0]))
+    for (const [x, z] of [[-0.2, -0.15], [0.2, -0.15], [-0.2, 0.15], [0.2, 0.15]]) head.add(this.slot(leg, x, 0.964, z, 0.06, 0.018))
+    for (const s of [-1, 1]) head.add(this.solid(leg, box(0.03, 0.3, 0.28), [s * 0.135, 0.815, 0]))
+    head.add(this.solid(leg, box(0.24, 0.2, 0.2), [0, 0.8, 0]))
+    head.add(this.solid(leg, box(0.2, 0.15, 0.014), [0, 0.81, 0.107]))
+    for (const [x, y] of [[-0.075, 0.865], [0.075, 0.865], [-0.075, 0.755], [0.075, 0.755]]) head.add(this.screw(leg, [x, y, 0.118], 'z', 0.014))
+    head.add(this.outline(leg, [[-0.05, 0.79, 0.1145], [0.03, 0.79, 0.1145], [0.03, 0.83, 0.1145], [-0.05, 0.83, 0.1145]]))
+    head.add(this.solid(leg, box(0.36, 0.025, 0.05), [0, 0.92, 0.13]))
+    for (const s of [-1, 1]) head.add(this.solid(leg, box(0.025, 0.24, 0.05), [s * 0.17, 0.81, 0.13]))
+    head.add(this.solid(leg, box(0.05, 0.02, 0.46), [0.17, 0.92, 0.37]))
+    for (const x of [-0.05, 0.05]) for (const z of [-0.06, 0.06]) head.add(this.solid(leg, cyl(0.035, 0.05, 12), [x, 0.67, z], [0, 0, Math.PI / 2], 1))
+    head.add(this.solid(leg, cyl(0.07, 0.03, 14), [0, 0.64, 0], [0, 0, 0], 1))
+    const rodLength = 0.54 + LIFT
+    L.add(this.solid(leg, cyl(0.032, rodLength, 10), [0, 0.1 + rodLength / 2, 0], [0, 0, 0], 1))
+    const turns = 22
+    const springHeight = 0.44 + LIFT * 0.45
     const helix = Array.from({ length: turns * 28 + 1 }, (_, i) => {
       const t = i / 28
-      return new THREE.Vector3(Math.cos(t * Math.PI * 2) * 0.075, (i / (turns * 28)) * 0.44, Math.sin(t * Math.PI * 2) * 0.075)
+      return new THREE.Vector3(Math.cos(t * Math.PI * 2) * 0.075, (i / (turns * 28)) * springHeight, Math.sin(t * Math.PI * 2) * 0.075)
     })
     const spring = new THREE.Group()
     spring.add(this.polyline(leg, helix))
@@ -421,6 +429,7 @@ export class ModelScene {
     const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d)
     const cyl = (r: number, h: number, seg = 14) => new THREE.CylinderGeometry(r, r, h, seg)
     const v = this.variants[slot]
+    if (slot === 'metal') part.group.position.y = v === 'magnetometer' ? LIFT : 0
 
     if (slot === 'camera') {
       g.position.set(0, 0.95, 0.52)
@@ -569,7 +578,7 @@ export class ModelScene {
         if (c < contact || p >= 3) squash = 1 - 0.42 * Math.sin((Math.min(c, contact) / contact) * Math.PI)
         else {
           const u = (c - contact) / (1 - contact)
-          lift = 4 * 1.3 * u * (1 - u)
+          lift = 4 * 1.6 * u * (1 - u)
           squash = 1 + 0.08 * Math.sin(u * Math.PI)
         }
       }
@@ -601,7 +610,7 @@ export class ModelScene {
 
     // Glide the camera focus towards the chosen part.
     // Keep the whole drone in frame, leaning towards the chosen part.
-    const home = new THREE.Vector3(0, 1 + this.root.position.y * 0.5, 0)
+    const home = new THREE.Vector3(0, 1.9 + this.root.position.y * 0.5, 0)
     const goal = this.selected
       ? home.lerp(new THREE.Box3().setFromObject(this.parts.get(this.selected)!.group).getCenter(new THREE.Vector3()), 0.6)
       : home
