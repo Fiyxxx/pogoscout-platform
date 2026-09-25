@@ -7,8 +7,7 @@ import type { WorldMission } from '../../api/types'
 import { cellBounds, cellRing, gridToLngLat } from '../../lib/geo'
 import { isMaterial, MATERIAL_COLORS } from '../../lib/materials'
 
-export type Basemap = 'relief' | 'satellite'
-export type WorldLayers = { basemap: Basemap; hotspots: boolean; footprints: boolean }
+export type WorldLayers = { hotspots: boolean; footprints: boolean }
 
 type Props = {
   missions: WorldMission[]
@@ -21,26 +20,19 @@ type Props = {
 // Let Vite bundle MapLibre's module worker; its default lookup fails under the dev bundler.
 setWorkerUrl(maplibreWorkerUrl)
 
-const TERRAIN_EXAGGERATION = 3
+const TERRAIN_EXAGGERATION = 1.5
 const OVERVIEW = { center: [103.81, 1.318] as [number, number], zoom: 11.15, pitch: 50, bearing: -12 }
 const SIGNAL = '#ff5a1f'
 
 const STYLE: StyleSpecification = {
   version: 8,
   sources: {
-    // Keyless basemaps: Esri World Dark Gray Canvas (relief) and World Imagery (satellite).
-    relief: {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      maxzoom: 16,
-      attribution: 'Basemap © Esri, HERE, Garmin, OpenStreetMap contributors',
-    },
+    // Keyless basemap: Esri World Imagery with Esri place labels.
     labels: {
       type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
-      maxzoom: 16,
+      maxzoom: 19,
     },
     satellite: {
       type: 'raster',
@@ -67,16 +59,15 @@ const STYLE: StyleSpecification = {
   },
   layers: [
     { id: 'background', type: 'background', paint: { 'background-color': '#0a0a0a' } },
-    { id: 'relief', type: 'raster', source: 'relief', paint: { 'raster-saturation': -1, 'raster-contrast': 0.15 } },
     {
-      id: 'satellite', type: 'raster', source: 'satellite', layout: { visibility: 'none' },
+      id: 'satellite', type: 'raster', source: 'satellite',
       paint: { 'raster-saturation': -0.55, 'raster-brightness-max': 0.62, 'raster-contrast': 0.08 },
     },
     {
       id: 'hillshade', type: 'hillshade', source: 'shadeDem',
-      paint: { 'hillshade-shadow-color': '#000000', 'hillshade-highlight-color': '#5a5a56', 'hillshade-accent-color': '#161615', 'hillshade-exaggeration': 0.7 },
+      paint: { 'hillshade-shadow-color': '#000000', 'hillshade-highlight-color': '#5a5a56', 'hillshade-accent-color': '#161615', 'hillshade-exaggeration': 0.25 },
     },
-    { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.55 } },
+    { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.8 } },
   ],
   terrain: { source: 'terrainDem', exaggeration: TERRAIN_EXAGGERATION },
   sky: { 'sky-color': '#0a0a0a', 'horizon-color': '#1a1a19', 'fog-color': '#0a0a0a', 'sky-horizon-blend': 0.5, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.7 },
@@ -200,7 +191,7 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
       canvasContextAttributes: { antialias: true },
     })
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
-    map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right')
+    map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
     map.on('load', () => {
       addMissionLayers(map)
       ready.current = true
@@ -305,10 +296,6 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
     const map = mapRef.current
     if (!map) return
     const apply = () => {
-      const satellite = layers.basemap === 'satellite'
-      map.setLayoutProperty('satellite', 'visibility', satellite ? 'visible' : 'none')
-      map.setLayoutProperty('relief', 'visibility', satellite ? 'none' : 'visible')
-      map.setPaintProperty('hillshade', 'hillshade-exaggeration', satellite ? 0.25 : 0.7)
       if (!ready.current) return
       map.setLayoutProperty('hotspots', 'visibility', layers.hotspots ? 'visible' : 'none')
       for (const id of ['cells', 'outlines']) map.setLayoutProperty(id, 'visibility', layers.footprints ? 'visible' : 'none')

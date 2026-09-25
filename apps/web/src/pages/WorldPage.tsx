@@ -15,7 +15,7 @@ export function WorldPage() {
   const world = useQuery({ queryKey: keys.world, queryFn: api.world, refetchInterval: 4_000 })
   const [focused, setFocused] = useState<string | null>(null)
   const [overview, setOverview] = useState(0)
-  const [layers, setLayers] = useState<WorldLayers>({ basemap: 'relief', hotspots: true, footprints: true })
+  const [layers, setLayers] = useState<WorldLayers>({ hotspots: true, footprints: true })
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -77,22 +77,15 @@ export function WorldPage() {
           <MissionPreview
             mission={focusedMission}
             onClose={() => setFocused(null)}
-            style={{ position: 'absolute', right: 20, top: 20, bottom: 76, border: '1px solid var(--line-strong)', background: 'rgba(10,10,10,.94)' }}
+            style={{ position: 'absolute', right: 20, top: 20, bottom: 84, border: '1px solid var(--line-strong)', background: 'rgba(10,10,10,.94)' }}
           />
         )}
 
         <div style={{ ...panel, left: 20, bottom: 20, padding: 12, display: 'flex', flexDirection: 'column', gap: 12, width: 320 }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            <div className="segmented" style={{ flexGrow: 1 }}>
-              <button style={{ flexGrow: 1, fontFamily: 'var(--font-ui)' }} aria-pressed={layers.basemap === 'relief'} onClick={() => setLayers({ ...layers, basemap: 'relief' })}>
-                Relief
-              </button>
-              <button style={{ flexGrow: 1, fontFamily: 'var(--font-ui)' }} aria-pressed={layers.basemap === 'satellite'} onClick={() => setLayers({ ...layers, basemap: 'satellite' })}>
-                Satellite
-              </button>
-            </div>
             <button
               className="btn btn-sm"
+              style={{ flexGrow: 1 }}
               onClick={() => {
                 setFocused(null)
                 setOverview((n) => n + 1)
@@ -120,7 +113,7 @@ export function WorldPage() {
                 <span style={{ width: 9, height: 9, borderRadius: '50%', border: '2px solid #fff', boxShadow: '0 0 0 3px rgba(255,255,255,.15)' }} />
                 Scout position
               </span>
-              <span>Elevation ×3</span>
+              <span>Elevation ×1.5</span>
             </div>
           </div>
         </div>
