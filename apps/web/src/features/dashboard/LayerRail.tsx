@@ -45,7 +45,7 @@ function legendFor(layer: Layer, cells: Cell[]): Swatch[] {
 export function LayerRail({ layer, onLayer, cells }: { layer: Layer; onLayer: (l: Layer) => void; cells: Cell[] }) {
   const counts = layerCounts(cells)
   return (
-    <aside style={{ width: 240, flexShrink: 0, borderRight: '1px solid var(--line)', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <aside className="scroll" style={{ width: 240, flexShrink: 0, borderRight: '1px solid var(--line)', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <h2 className="section-title" style={{ padding: '0 10px 8px' }}>
           Layers

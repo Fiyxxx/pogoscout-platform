@@ -56,7 +56,7 @@ export function Inspector({ mission, cell }: { mission: MissionSummary; cell: Ce
         <Fact label="Visits" value={cell.visit_count} divider />
       </div>
 
-      <Capture image={obs.image} alt={`Ground capture for hop ${obs.hop_id}`} style={{ width: '100%', aspectRatio: '340 / 190' }}>
+      <Capture image={obs.image} alt={`Ground capture for hop ${obs.hop_id}`} style={{ width: '100%', aspectRatio: '340 / 190', flexShrink: 0 }}>
         {obs.image && <Overlay corner="bl">{clock(obs.observed_at)}Z</Overlay>}
       </Capture>
 
@@ -92,7 +92,7 @@ export function Inspector({ mission, cell }: { mission: MissionSummary; cell: Ce
         <Row k="Classified" v={c.completed_at ? `${clock(c.completed_at)}Z` : 'Pending'} last />
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ position: 'sticky', bottom: -20, marginTop: 'auto', margin: '-4px -20px -20px', padding: '12px 20px 20px', background: 'var(--bg)', borderTop: '1px solid var(--line)', display: 'flex', gap: 8 }}>
         <button className="btn" style={{ flexGrow: 1 }} onClick={copy}>
           <CopyIcon />
           {copied ? 'Copied' : 'Copy record'}
@@ -107,7 +107,7 @@ export function Inspector({ mission, cell }: { mission: MissionSummary; cell: Ce
 
 const asideStyle = {
   width: 380, flexShrink: 0, borderLeft: '1px solid var(--line)', padding: 20,
-  display: 'flex', flexDirection: 'column' as const, gap: 18,
+  display: 'flex', flexDirection: 'column' as const, gap: 18, overflowY: 'auto' as const,
 }
 
 function Fact({ label, value, divider }: { label: string; value: React.ReactNode; divider?: boolean }) {

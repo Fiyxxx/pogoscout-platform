@@ -124,7 +124,7 @@ function Evidence({ mission, data, cell }: { mission: MissionSummary; data: Cell
       </div>
 
       <div style={{ flexGrow: 1, minHeight: 0, padding: 24, display: 'flex', gap: 24 }}>
-        <div style={{ flex: '0 0 58%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="scroll" style={{ flex: '0 0 58%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
           <Capture image={obs.image} alt={`Ground capture for hop ${obs.hop_id}`} style={{ flexGrow: 1, minHeight: 240, maxHeight: 460 }} emptyText="No capture received for this hop">
             {obs.image && <Overlay corner="bl">{clock(obs.observed_at)}Z</Overlay>}
             <Overlay corner="br">Hop {pad3(obs.hop_id)}</Overlay>

@@ -189,6 +189,8 @@ export class MissionScene {
   }
 
   resize(width: number, height: number) {
+    const zoom = width > 0 ? this.canvas.getBoundingClientRect().width / width : 1
+    this.renderer.setPixelRatio(Math.min(3, (window.devicePixelRatio || 1) * (zoom || 1)))
     this.renderer.setSize(width, height, false)
     this.camera.aspect = width / Math.max(1, height)
     this.camera.updateProjectionMatrix()

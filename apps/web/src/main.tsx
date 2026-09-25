@@ -10,6 +10,9 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { CellPage } from './pages/CellPage'
 import { MissionPage } from './pages/MissionPage'
 import { MissionsPage } from './pages/MissionsPage'
+import { installViewportScale } from './lib/viewportScale'
+
+installViewportScale()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 2_000, refetchOnWindowFocus: false } },
