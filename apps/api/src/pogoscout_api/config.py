@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     fixture_dir: Path = Path("../../fixtures")
     classifier: Literal["mock", "http", "disabled"] = "mock"
     ml_service_url: str | None = None
-    taxonomy_version: str = "pogo-materials-v1"
+    taxonomy_version: str = "pogo-materials-v2"
     cors_origins: list[str] = ["http://localhost:5173"]
 
 

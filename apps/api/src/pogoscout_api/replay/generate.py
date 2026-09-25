@@ -11,13 +11,16 @@ from pogoscout_api.domain.hops import MOVEMENT_VECTORS
 from pogoscout_api.replay.scenario import HopEvent, ImageEvent, Scenario, ScenarioMission
 
 MOCK_IMAGE_COLOURS: dict[str, tuple[int, int, int]] = {
-    "firm_soil": (122, 92, 60),
-    "leaf_litter": (96, 110, 48),
-    "mud": (72, 58, 44),
-    "standing_water": (52, 84, 110),
-    "root_or_wood": (110, 74, 40),
-    "manmade_surface": (128, 128, 124),
-    "unknown": (60, 60, 60),
+    "soil": (138, 74, 44),
+    "mud": (74, 46, 32),
+    "sand": (211, 194, 155),
+    "gravel": (141, 141, 136),
+    "grass_vegetation": (63, 107, 42),
+    "leaf_litter": (107, 74, 38),
+    "concrete": (185, 184, 178),
+    "asphalt": (47, 47, 48),
+    "tiles_pavers": (168, 106, 82),
+    "water": (31, 52, 64),
 }
 
 BASE_TIME = datetime(2026, 9, 25, 8, 0, 0, tzinfo=UTC)
@@ -44,12 +47,12 @@ def render_mock_image(path: Path, scenario_id: str, hop_id: int, label: str, see
 
 
 def _material_for(x: int, y: int) -> str:
-    """Clean baseline terrain: firm soil with a leaf-litter strip and a man-made patch."""
+    """Clean baseline terrain: soil with a leaf-litter strip and a concrete patch."""
     if y >= 5:
-        return "manmade_surface"
+        return "concrete"
     if x == 1:
         return "leaf_litter"
-    return "firm_soil"
+    return "soil"
 
 
 def build_clean_baseline(out_dir: Path, seed: int = 42) -> None:

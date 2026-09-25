@@ -1,0 +1,15 @@
+{
+  "taxonomy_version": "pogo-materials-v2",
+  "labels": [
+    "soil",
+    "mud",
+    "sand",
+    "gravel",
+    "grass_vegetation",
+    "leaf_litter",
+    "concrete",
+    "asphalt",
+    "tiles_pavers",
+    "water"
+  ]
+}
