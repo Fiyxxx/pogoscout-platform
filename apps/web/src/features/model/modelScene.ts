@@ -13,7 +13,7 @@ const INK = 0x151515
 const SIGNAL = 0xff5a1f
 const INK_WIDTH = 1.25
 // The scout rides high on a long pogo stick: everything above the leg sits this much higher.
-const LIFT = 2.2
+const LIFT = 0.83
 
 type Piece = { obj: THREE.Object3D; base: THREE.Vector3; explode: THREE.Vector3 }
 
@@ -89,7 +89,7 @@ export class ModelScene {
   private exploded = false
   private explodeT = 0
   private hopStart = -1
-  private focusDistance = 10
+  private focusDistance = 8.5
   // The camera glides to focusDistance only until this time, then zoom belongs to the user.
   private focusUntil = -1
   private raf = 0
@@ -113,9 +113,9 @@ export class ModelScene {
     this.labels.domElement.style.pointerEvents = 'none'
     container.appendChild(this.labels.domElement)
 
-    this.camera.position.set(6.4, 4.8, 7.4)
+    this.camera.position.set(5.4, 4.0, 6.2)
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
-    this.controls.target.set(0, 1.9, 0)
+    this.controls.target.set(0, 1.4, 0)
     this.controls.enableDamping = true
     this.controls.dampingFactor = 0.08
     this.controls.minDistance = 2
@@ -167,7 +167,7 @@ export class ModelScene {
   select(id: PartId | null) {
     this.selected = id
     if (id) this.exploded = true
-    this.focusDistance = id ? 8 : 10
+    this.focusDistance = id ? 7 : 8.5
     this.focusUntil = this.clock.elapsedTime + 1.4
     this.paint()
   }
@@ -383,18 +383,19 @@ export class ModelScene {
     head.add(this.solid(leg, cyl(0.07, 0.03, 14), [0, 0.64, 0], [0, 0, 0], 1))
     const rodLength = 0.54 + LIFT
     L.add(this.solid(leg, cyl(0.032, rodLength, 10), [0, 0.1 + rodLength / 2, 0], [0, 0, 0], 1))
-    const turns = 22
-    const springHeight = 0.44 + LIFT * 0.45
+    // The spring runs the rod from just under the carriage down to just above the ball foot.
+    const springBottom = 0.215
+    const springHeight = 0.62 + LIFT - springBottom
+    const turns = 16
     const helix = Array.from({ length: turns * 28 + 1 }, (_, i) => {
       const t = i / 28
       return new THREE.Vector3(Math.cos(t * Math.PI * 2) * 0.075, (i / (turns * 28)) * springHeight, Math.sin(t * Math.PI * 2) * 0.075)
     })
     const spring = new THREE.Group()
     spring.add(this.polyline(leg, helix))
-    spring.position.set(0, 0.19, 0)
+    spring.position.set(0, springBottom, 0)
     this.spring = spring
     L.add(spring)
-    L.add(this.solid(leg, cyl(0.06, 0.04, 14), [0, 0.17, 0], [0, 0, 0], 1))
     L.add(this.solid(leg, new THREE.IcosahedronGeometry(0.1, 1), [0, 0.1, 0], [0, 0, 0], 12))
     this.piece(leg, L, [0, -0.9, 0])
 
@@ -611,7 +612,7 @@ export class ModelScene {
 
     // Glide the camera focus towards the chosen part.
     // Keep the whole drone in frame, leaning towards the chosen part.
-    const home = new THREE.Vector3(0, 1.9 + this.root.position.y * 0.5, 0)
+    const home = new THREE.Vector3(0, 1.4 + this.root.position.y * 0.5, 0)
     const goal = this.selected
       ? home.lerp(new THREE.Box3().setFromObject(this.parts.get(this.selected)!.group).getCenter(new THREE.Vector3()), 0.6)
       : home
