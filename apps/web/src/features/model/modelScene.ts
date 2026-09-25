@@ -115,13 +115,13 @@ export class ModelScene {
     this.controls.enableDamping = true
     this.controls.dampingFactor = 0.08
     this.controls.minDistance = 2
-    this.controls.maxDistance = 14
+    this.controls.maxDistance = 32
     this.controls.maxPolarAngle = Math.PI * 0.55
     this.controls.autoRotate = true
     this.controls.autoRotateSpeed = 0.6
     this.controls.addEventListener('start', () => (this.controls.autoRotate = false))
 
-    const grid = new THREE.GridHelper(14, 28, 0xcfcfca, 0xe2e2dd)
+    const grid = new THREE.GridHelper(48, 96, 0xcfcfca, 0xe2e2dd)
     this.scene.add(grid)
     this.scene.add(this.root)
     this.build()
@@ -130,7 +130,9 @@ export class ModelScene {
     canvas.addEventListener('pointerdown', (e) => (this.down = { x: e.clientX, y: e.clientY }))
     canvas.addEventListener('pointerup', (e) => {
       if (Math.abs(e.clientX - this.down.x) + Math.abs(e.clientY - this.down.y) > 4) return
-      const id = this.pick(e.clientX, e.clientY)
+      // Clicking the selected part again (or empty space) deselects, like the list.
+      const hit = this.pick(e.clientX, e.clientY)
+      const id = hit === this.selected ? null : hit
       this.select(id)
       this.onSelect(id)
     })
@@ -548,20 +550,26 @@ export class ModelScene {
     this.explodeT += ((this.exploded ? 1 : 0) - this.explodeT) * 0.08
     const k = ease(Math.min(1, Math.max(0, this.explodeT)))
 
-    // Hop demo: compress, launch, arc, land, three times.
+    // Hop demo, three hops: a brief spring compression on contact, then straight back up on a
+    // ballistic arc. Positions are set directly each frame so landing and take-off are crisp.
     let lift = 0
     let squash = 1
     if (this.hopStart >= 0) {
-      const p = (t - this.hopStart) / 1.25
-      if (p >= 3) this.hopStart = -1
+      const p = (t - this.hopStart) / 0.95
+      if (p >= 3.08) this.hopStart = -1
       else {
         const c = p % 1
-        if (c < 0.22) squash = 1 - 0.35 * Math.sin((c / 0.22) * Math.PI)
-        else if (c < 0.92) lift = Math.sin(((c - 0.22) / 0.7) * Math.PI) * 1.3
+        const contact = 0.08
+        if (c < contact || p >= 3) squash = 1 - 0.42 * Math.sin((Math.min(c, contact) / contact) * Math.PI)
+        else {
+          const u = (c - contact) / (1 - contact)
+          lift = 4 * 1.3 * u * (1 - u)
+          squash = 1 + 0.08 * Math.sin(u * Math.PI)
+        }
       }
     }
-    this.root.position.y += (lift - this.root.position.y) * 0.35
-    if (this.spring) this.spring.scale.y += (squash - this.spring.scale.y) * 0.4
+    this.root.position.y = lift
+    if (this.spring) this.spring.scale.y = squash
     for (const p of this.props) p.rotation.y += dt * (this.hopStart >= 0 ? 40 : 6)
 
     for (const part of this.parts.values()) {
