@@ -57,7 +57,7 @@ def main() -> None:
     sub.add_parser("contracts", help="export JSON contracts")
     load = sub.add_parser("load", help="replay a fixture into a running API")
     load.add_argument("name")
-    load.add_argument("--api", default="http://localhost:8000/api/v1")
+    load.add_argument("--api", default="http://127.0.0.1:8000/api/v1")
     load.add_argument("--mission-id")
     args = parser.parse_args()
 
