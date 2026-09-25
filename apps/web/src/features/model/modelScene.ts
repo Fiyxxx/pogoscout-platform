@@ -88,6 +88,8 @@ export class ModelScene {
   private explodeT = 0
   private hopStart = -1
   private focusDistance = 7
+  // The camera glides to focusDistance only until this time, then zoom belongs to the user.
+  private focusUntil = -1
   private raf = 0
   private disposed = false
   private container: HTMLElement
@@ -119,7 +121,10 @@ export class ModelScene {
     this.controls.maxPolarAngle = Math.PI * 0.55
     this.controls.autoRotate = true
     this.controls.autoRotateSpeed = 0.6
-    this.controls.addEventListener('start', () => (this.controls.autoRotate = false))
+    this.controls.addEventListener('start', () => {
+      this.controls.autoRotate = false
+      this.focusUntil = -1 // the user took over: stop steering the zoom
+    })
 
     const grid = new THREE.GridHelper(48, 96, 0xcfcfca, 0xe2e2dd)
     this.scene.add(grid)
@@ -161,6 +166,7 @@ export class ModelScene {
     this.selected = id
     if (id) this.exploded = true
     this.focusDistance = id ? 6.2 : 7
+    this.focusUntil = this.clock.elapsedTime + 1.4
     this.paint()
   }
 
@@ -602,7 +608,7 @@ export class ModelScene {
     this.controls.target.lerp(goal, 0.07)
     const offset = this.camera.position.clone().sub(this.controls.target)
     const dist = offset.length()
-    if (!this.controls.autoRotate || this.selected) offset.setLength(dist + (this.focusDistance - dist) * 0.04)
+    if (t < this.focusUntil) offset.setLength(dist + (this.focusDistance - dist) * 0.06)
     this.camera.position.copy(this.controls.target).add(offset)
     this.controls.update()
     this.renderer.render(this.scene, this.camera)
