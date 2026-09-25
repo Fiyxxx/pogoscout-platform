@@ -31,7 +31,7 @@ export const PARTS: Part[] = [
     id: 'leg',
     name: 'Pogo leg',
     role: 'Spring-loaded telescoping leg',
-    how: 'The leg compresses on landing, stores that energy in the spring and releases it for the next hop, so most of the lift comes from the spring rather than the battery. Hopping instead of hovering is what gives the scout its endurance.',
+    how: 'A slotted plate bolts the leg under the core. Below it a carriage rides on guide rollers along the rod, with a small board that senses how far the spring compresses. On landing the ball foot drives the rod up, the coil spring stores that energy and releases it for the next hop, so most of the lift comes from the spring rather than the battery. The bracket arm latches the carriage between hops.',
   },
   {
     id: 'camera',
@@ -65,7 +65,7 @@ export const PARTS: Part[] = [
     id: 'battery',
     name: 'Battery',
     role: 'Hot-swappable LiPo pack',
-    how: 'Slides into the rail under the core. Because the spring does most of the work, a pack lasts for hundreds of hops, and a spare can be swapped in between sweeps.',
+    how: 'Strapped to the lid with its balance lead and power connector within reach, so a spare can be swapped in between sweeps. Because the spring does most of the work, a pack lasts for hundreds of hops.',
   },
 ]
 

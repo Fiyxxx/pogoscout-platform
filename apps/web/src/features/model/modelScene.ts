@@ -25,6 +25,44 @@ type PartBuild = {
   swap?: { t: number; next: string; built: boolean }
 }
 
+/** A rounded rectangle footprint (x by z), centred. */
+function roundedRect(w: number, d: number, r: number): THREE.Shape {
+  const s = new THREE.Shape()
+  const x = -w / 2
+  const y = -d / 2
+  s.moveTo(x + r, y)
+  s.lineTo(x + w - r, y)
+  s.quadraticCurveTo(x + w, y, x + w, y + r)
+  s.lineTo(x + w, y + d - r)
+  s.quadraticCurveTo(x + w, y + d, x + w - r, y + d)
+  s.lineTo(x + r, y + d)
+  s.quadraticCurveTo(x, y + d, x, y + d - r)
+  s.lineTo(x, y + r)
+  s.quadraticCurveTo(x, y, x + r, y)
+  return s
+}
+
+/** Extrudes a footprint upwards by `h`, centred on the origin. */
+function prism(shape: THREE.Shape, h: number): THREE.BufferGeometry {
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 4 })
+  geo.rotateX(-Math.PI / 2)
+  geo.translate(0, -h / 2, 0)
+  return geo
+}
+
+/** One tapered propeller blade from the hub outwards along +x. */
+function blade(): THREE.BufferGeometry {
+  const s = new THREE.Shape()
+  s.moveTo(0.04, -0.025)
+  s.quadraticCurveTo(0.28, -0.075, 0.56, -0.02)
+  s.quadraticCurveTo(0.6, 0, 0.56, 0.02)
+  s.quadraticCurveTo(0.28, 0.05, 0.04, 0.025)
+  s.lineTo(0.04, -0.025)
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.012, bevelEnabled: false, curveSegments: 6 })
+  geo.rotateX(-Math.PI / 2)
+  return geo
+}
+
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
 /**
@@ -209,12 +247,39 @@ export class ModelScene {
     return new Line2(geo, this.ink(part))
   }
 
-  private circle(part: PartBuild, r: number, y: number, segments = 48) {
+  /** A circle in the horizontal plane at `centre`. */
+  private circle(part: PartBuild, r: number, y: number, segments = 48, cx = 0, cz = 0) {
     const pts = Array.from({ length: segments + 1 }, (_, i) => {
       const a = (i / segments) * Math.PI * 2
-      return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r)
+      return new THREE.Vector3(cx + Math.cos(a) * r, y, cz + Math.sin(a) * r)
     })
     return this.polyline(part, pts)
+  }
+
+  /** A closed outline through the given points. */
+  private outline(part: PartBuild, points: THREE.Vector3Tuple[]) {
+    return this.polyline(part, [...points, points[0]].map((p) => new THREE.Vector3(...p)))
+  }
+
+  /** A slotted mounting hole drawn on a horizontal face. */
+  private slot(part: PartBuild, cx: number, y: number, cz: number, length: number, r: number) {
+    const pts: THREE.Vector3[] = []
+    for (let i = 0; i <= 12; i++) {
+      const a = -Math.PI / 2 + (i / 12) * Math.PI
+      pts.push(new THREE.Vector3(cx + length / 2 + Math.cos(a) * r, y, cz + Math.sin(a) * r))
+    }
+    for (let i = 0; i <= 12; i++) {
+      const a = Math.PI / 2 + (i / 12) * Math.PI
+      pts.push(new THREE.Vector3(cx - length / 2 + Math.cos(a) * r, y, cz + Math.sin(a) * r))
+    }
+    pts.push(pts[0].clone())
+    return this.polyline(part, pts)
+  }
+
+  /** A socket-head screw; `axis` is the direction its head faces. */
+  private screw(part: PartBuild, at: THREE.Vector3Tuple, axis: 'x' | 'y' | 'z' = 'y', r = 0.022) {
+    const rot: THREE.Vector3Tuple = axis === 'y' ? [0, 0, 0] : axis === 'x' ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]
+    return this.solid(part, new THREE.CylinderGeometry(r, r, 0.018, 8), at, rot, 1)
   }
 
   private piece(part: PartBuild, obj: THREE.Object3D, explode: THREE.Vector3Tuple) {
@@ -226,66 +291,108 @@ export class ModelScene {
     const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d)
     const cyl = (r: number, h: number, seg = 14) => new THREE.CylinderGeometry(r, r, h, seg)
 
-    // Core
+    // Core: rounded airframe with lid, vents, fasteners, status light and connector.
     const core = this.newPart('core')
     const body = new THREE.Group()
-    body.add(this.solid(core, box(1.3, 0.42, 1.3), [0, 1.25, 0]))
-    body.add(this.solid(core, box(0.86, 0.06, 0.86), [0, 1.49, 0]))
-    body.add(this.solid(core, box(0.5, 0.05, 0.3), [0, 1.545, 0.12]))
-    for (const s of [-1, 1]) body.add(this.solid(core, box(1.1, 0.04, 0.06), [0, 1.02, s * 0.5]))
+    body.add(this.solid(core, prism(roundedRect(1.3, 1.3, 0.2), 0.42), [0, 1.25, 0]))
+    body.add(this.solid(core, prism(roundedRect(0.94, 0.94, 0.12), 0.05), [0, 1.485, 0]))
+    for (const [x, z] of [[-0.38, -0.38], [0.38, -0.38], [-0.38, 0.38], [0.38, 0.38]]) body.add(this.screw(core, [x, 1.517, z]))
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 5; i++) {
+        const z = -0.24 + i * 0.12
+        body.add(this.outline(core, [[s * 0.651, 1.2, z - 0.035], [s * 0.651, 1.2, z + 0.035], [s * 0.651, 1.34, z + 0.035], [s * 0.651, 1.34, z - 0.035]]))
+      }
+    }
+    body.add(this.solid(core, cyl(0.035, 0.03, 12), [0.32, 1.25, 0.66], [Math.PI / 2, 0, 0], 1))
+    body.add(this.outline(core, [[-0.12, 1.3, 0.651], [0.12, 1.3, 0.651], [0.12, 1.36, 0.651], [-0.12, 1.36, 0.651]]))
+    body.add(this.solid(core, box(0.26, 0.09, 0.05), [0, 1.2, -0.67]))
+    body.add(this.outline(core, [[-0.08, 1.18, -0.696], [0.08, 1.18, -0.696], [0.08, 1.22, -0.696], [-0.08, 1.22, -0.696]]))
     this.piece(core, body, [0, 0, 0])
 
-    // Propulsion: four guarded rotors
+    // Propulsion: arm with mount plate, motor stator and vented bell, shaped blades, guard.
     const prop = this.newPart('propulsion')
+    const bladeGeo = blade()
     for (let i = 0; i < 4; i++) {
       const a = Math.PI / 4 + (i * Math.PI) / 2
       const dx = Math.cos(a)
       const dz = Math.sin(a)
+      const m = (d: number, y: number): THREE.Vector3Tuple => [dx * d, y, dz * d]
       const rotor = new THREE.Group()
-      rotor.add(this.solid(prop, box(1.2, 0.07, 0.11), [dx * 0.98, 1.36, dz * 0.98], [0, -a, 0]))
-      rotor.add(this.solid(prop, cyl(0.15, 0.22, 12), [dx * 1.6, 1.46, dz * 1.6], [0, 0, 0], 1))
+      rotor.add(this.solid(prop, box(1.0, 0.07, 0.12), m(1.08, 1.36), [0, -a, 0]))
+      rotor.add(this.screw(prop, m(0.72, 1.4)), this.screw(prop, m(0.86, 1.4)))
+      rotor.add(this.solid(prop, cyl(0.2, 0.03, 16), m(1.6, 1.41), [0, 0, 0], 1))
+      rotor.add(this.solid(prop, cyl(0.155, 0.09, 16), m(1.6, 1.47), [0, 0, 0], 1))
+      rotor.add(this.solid(prop, cyl(0.145, 0.1, 16), m(1.6, 1.56), [0, 0, 0], 1))
+      for (let k = 0; k < 8; k++) {
+        const b = (k / 8) * Math.PI * 2
+        const [cx, , cz] = m(1.6, 0)
+        rotor.add(this.polyline(prop, [new THREE.Vector3(cx + Math.cos(b) * 0.146, 1.53, cz + Math.sin(b) * 0.146), new THREE.Vector3(cx + Math.cos(b) * 0.146, 1.59, cz + Math.sin(b) * 0.146)]))
+      }
+      rotor.add(this.solid(prop, cyl(0.02, 0.06, 8), m(1.6, 1.63), [0, 0, 0], 1))
       const blades = new THREE.Group()
-      blades.add(this.solid(prop, box(1.18, 0.02, 0.09), [0, 0, 0]))
-      blades.add(this.solid(prop, box(0.09, 0.02, 1.18), [0, 0, 0]))
-      blades.position.set(dx * 1.6, 1.6, dz * 1.6)
+      blades.add(this.solid(prop, cyl(0.05, 0.04, 12), [0, 0, 0], [0, 0, 0], 1))
+      for (const turn of [0, Math.PI]) {
+        const bl = this.solid(prop, bladeGeo, [0, 0, 0], [0, turn, 0])
+        blades.add(bl)
+      }
+      blades.position.set(...m(1.6, 1.66))
       this.props.push(blades)
       rotor.add(blades)
       const guard = new THREE.Group()
-      guard.add(this.circle(prop, 0.74, 0), this.circle(prop, 0.74, 0.16))
-      for (let k = 0; k < 6; k++) {
-        const b = (k / 6) * Math.PI * 2
+      guard.add(this.circle(prop, 0.74, 0), this.circle(prop, 0.74, 0.16), this.circle(prop, 0.7, 0.16))
+      for (let k = 0; k < 10; k++) {
+        const b = (k / 10) * Math.PI * 2
         guard.add(this.polyline(prop, [new THREE.Vector3(Math.cos(b) * 0.74, 0, Math.sin(b) * 0.74), new THREE.Vector3(Math.cos(b) * 0.74, 0.16, Math.sin(b) * 0.74)]))
       }
-      guard.position.set(dx * 1.6, 1.5, dz * 1.6)
+      guard.position.set(...m(1.6, 1.5))
       rotor.add(guard)
+      rotor.add(this.solid(prop, box(0.3, 0.04, 0.06), m(0.98, 1.43), [0, -a, 0]))
       this.piece(prop, rotor, [dx * 0.9, 0.35, dz * 0.9])
     }
 
-    // Pogo leg: shaft, spring and foot
+    // Pogo leg: slotted mounting plates, carriage frame with sensor board, U-bracket and arm,
+    // guide rollers, rod with coil spring and a ball foot.
     const leg = this.newPart('leg')
-    const legGroup = new THREE.Group()
-    legGroup.add(this.solid(leg, cyl(0.05, 0.95, 10), [0, 0.58, 0], [0, 0, 0], 1))
-    legGroup.add(this.solid(leg, cyl(0.11, 0.08, 14), [0, 1.0, 0], [0, 0, 0], 1))
-    legGroup.add(this.solid(leg, cyl(0.23, 0.07, 18), [0, 0.05, 0], [0, 0, 0], 1))
-    legGroup.add(this.solid(leg, cyl(0.1, 0.06, 14), [0, 0.12, 0], [0, 0, 0], 1))
-    const turns = 7
-    const helix = Array.from({ length: turns * 32 + 1 }, (_, i) => {
-      const t = i / 32
-      return new THREE.Vector3(Math.cos(t * Math.PI * 2) * 0.14, (i / (turns * 32)) * 0.6, Math.sin(t * Math.PI * 2) * 0.14)
+    const L = new THREE.Group()
+    L.add(this.solid(leg, box(0.62, 0.03, 0.46), [0, 1.005, 0]))
+    L.add(this.solid(leg, box(0.56, 0.025, 0.42), [0, 0.978, 0]))
+    for (const [x, z] of [[-0.2, -0.15], [0.2, -0.15], [-0.2, 0.15], [0.2, 0.15]]) L.add(this.slot(leg, x, 0.964, z, 0.06, 0.018))
+    for (const s of [-1, 1]) L.add(this.solid(leg, box(0.03, 0.3, 0.28), [s * 0.135, 0.815, 0]))
+    L.add(this.solid(leg, box(0.24, 0.2, 0.2), [0, 0.8, 0]))
+    L.add(this.solid(leg, box(0.2, 0.15, 0.014), [0, 0.81, 0.107]))
+    for (const [x, y] of [[-0.075, 0.865], [0.075, 0.865], [-0.075, 0.755], [0.075, 0.755]]) L.add(this.screw(leg, [x, y, 0.118], 'z', 0.014))
+    L.add(this.outline(leg, [[-0.05, 0.79, 0.1145], [0.03, 0.79, 0.1145], [0.03, 0.83, 0.1145], [-0.05, 0.83, 0.1145]]))
+    L.add(this.solid(leg, box(0.36, 0.025, 0.05), [0, 0.92, 0.13]))
+    for (const s of [-1, 1]) L.add(this.solid(leg, box(0.025, 0.24, 0.05), [s * 0.17, 0.81, 0.13]))
+    L.add(this.solid(leg, box(0.05, 0.02, 0.46), [0.17, 0.92, 0.37]))
+    for (const x of [-0.05, 0.05]) for (const z of [-0.06, 0.06]) L.add(this.solid(leg, cyl(0.035, 0.05, 12), [x, 0.67, z], [0, 0, Math.PI / 2], 1))
+    L.add(this.solid(leg, cyl(0.032, 0.56, 10), [0, 0.39, 0], [0, 0, 0], 1))
+    L.add(this.solid(leg, cyl(0.07, 0.03, 14), [0, 0.64, 0], [0, 0, 0], 1))
+    const turns = 11
+    const helix = Array.from({ length: turns * 28 + 1 }, (_, i) => {
+      const t = i / 28
+      return new THREE.Vector3(Math.cos(t * Math.PI * 2) * 0.075, (i / (turns * 28)) * 0.44, Math.sin(t * Math.PI * 2) * 0.075)
     })
     const spring = new THREE.Group()
     spring.add(this.polyline(leg, helix))
-    spring.position.set(0, 0.34, 0)
+    spring.position.set(0, 0.19, 0)
     this.spring = spring
-    legGroup.add(spring)
-    this.piece(leg, legGroup, [0, -0.9, 0])
+    L.add(spring)
+    L.add(this.solid(leg, cyl(0.06, 0.04, 14), [0, 0.17, 0], [0, 0, 0], 1))
+    L.add(this.solid(leg, new THREE.IcosahedronGeometry(0.1, 1), [0, 0.1, 0], [0, 0, 0], 12))
+    this.piece(leg, L, [0, -0.9, 0])
 
-    // Battery
+    // Battery on the lid: pack, strap, balance lead and power connector.
     const battery = this.newPart('battery')
     const pack = new THREE.Group()
-    pack.add(this.solid(battery, box(0.82, 0.16, 0.44), [0, 0.93, -0.33]))
-    pack.add(this.solid(battery, box(0.12, 0.08, 0.05), [0.28, 0.93, -0.08]))
-    this.piece(battery, pack, [0, -0.35, -1.2])
+    pack.add(this.solid(battery, prism(roundedRect(0.78, 0.4, 0.04), 0.16), [0, 1.59, -0.05]))
+    pack.add(this.solid(battery, box(0.08, 0.172, 0.43), [-0.18, 1.59, -0.05]))
+    pack.add(this.solid(battery, box(0.08, 0.172, 0.43), [0.18, 1.59, -0.05]))
+    pack.add(this.outline(battery, [[-0.1, 1.671, -0.15], [0.1, 1.671, -0.15], [0.1, 1.671, 0.05], [-0.1, 1.671, 0.05]]))
+    pack.add(this.solid(battery, box(0.1, 0.05, 0.06), [0.3, 1.6, 0.2]))
+    pack.add(this.polyline(battery, [new THREE.Vector3(-0.39, 1.62, 0.05), new THREE.Vector3(-0.47, 1.6, 0.1), new THREE.Vector3(-0.44, 1.55, 0.2)]))
+    pack.add(this.solid(battery, box(0.06, 0.03, 0.04), [-0.44, 1.54, 0.22]))
+    this.piece(battery, pack, [0, 1.0, -0.6])
 
     // Module slots
     for (const slot of ['camera', 'metal', 'gas', 'datalink'] as SlotId[]) this.buildSlot(slot)
@@ -308,59 +415,89 @@ export class ModelScene {
     const v = this.variants[slot]
 
     if (slot === 'camera') {
-      g.position.set(0, 0.98, 0.52)
+      g.position.set(0, 0.95, 0.52)
+      g.add(this.solid(part, box(0.36, 0.03, 0.08), [0, 0.1, -0.02]))
+      for (const s of [-1, 1]) g.add(this.screw(part, [s * 0.13, 0.117, -0.02]))
       if (v === 'rgb') {
-        g.add(this.solid(part, box(0.3, 0.2, 0.24), [0, 0, 0]))
-        g.add(this.solid(part, cyl(0.075, 0.08, 16), [0, -0.13, 0.02], [0, 0, 0], 1))
+        g.add(this.solid(part, prism(roundedRect(0.3, 0.24, 0.03), 0.18), [0, 0, 0]))
+        g.add(this.solid(part, cyl(0.08, 0.04, 18), [0, -0.11, 0.02], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.065, 0.05, 18), [0, -0.15, 0.02], [0, 0, 0], 1))
+        g.add(this.circle(part, 0.04, -0.176, 24, 0, 0.02))
+        g.add(this.solid(part, cyl(0.012, 0.01, 8), [0.1, -0.09, -0.07], [0, 0, 0], 1))
       } else if (v === 'thermal') {
-        g.add(this.solid(part, box(0.34, 0.22, 0.3), [0, 0, 0]))
-        g.add(this.solid(part, box(0.17, 0.06, 0.17), [0, -0.14, 0.02]))
-        for (const x of [-0.12, -0.04, 0.04, 0.12]) g.add(this.solid(part, box(0.02, 0.08, 0.26), [x, 0.15, 0]))
+        g.add(this.solid(part, prism(roundedRect(0.34, 0.3, 0.03), 0.2), [0, 0, 0]))
+        g.add(this.solid(part, box(0.18, 0.05, 0.18), [0, -0.125, 0.02]))
+        g.add(this.outline(part, [[-0.06, -0.151, -0.04], [0.06, -0.151, -0.04], [0.06, -0.151, 0.08], [-0.06, -0.151, 0.08]]))
+        for (const x of [-0.12, -0.06, 0, 0.06, 0.12]) g.add(this.solid(part, box(0.012, 0.07, 0.26), [x, 0.135, 0]))
       } else {
-        g.add(this.solid(part, box(0.42, 0.18, 0.32), [0, 0, 0]))
-        for (const [x, z] of [[-0.09, -0.07], [0.09, -0.07], [-0.09, 0.09], [0.09, 0.09]]) g.add(this.solid(part, cyl(0.045, 0.06, 12), [x, -0.12, z], [0, 0, 0], 1))
+        g.add(this.solid(part, prism(roundedRect(0.42, 0.32, 0.03), 0.16), [0, 0, 0]))
+        for (const [x, z] of [[-0.1, -0.07], [0.1, -0.07], [-0.1, 0.09], [0.1, 0.09]]) {
+          g.add(this.solid(part, cyl(0.05, 0.05, 14), [x, -0.1, z], [0, 0, 0], 1))
+          g.add(this.circle(part, 0.03, -0.126, 16, x, z))
+        }
       }
     } else if (slot === 'metal') {
       if (v === 'coil') {
-        g.add(this.circle(part, 0.44, 0.17), this.circle(part, 0.44, 0.22), this.circle(part, 0.38, 0.195))
+        for (const [r, y] of [[0.46, 0.15], [0.46, 0.24], [0.4, 0.15], [0.4, 0.24]] as [number, number][]) g.add(this.circle(part, r, y))
+        for (let k = 0; k < 6; k++) g.add(this.circle(part, 0.43, 0.165 + k * 0.012, 48))
         for (let k = 0; k < 3; k++) {
           const b = (k / 3) * Math.PI * 2 + 0.3
-          g.add(this.polyline(part, [new THREE.Vector3(Math.cos(b) * 0.11, 0.2, Math.sin(b) * 0.11), new THREE.Vector3(Math.cos(b) * 0.38, 0.2, Math.sin(b) * 0.38)]))
+          g.add(this.solid(part, box(0.29, 0.02, 0.04), [Math.cos(b) * 0.25, 0.25, Math.sin(b) * 0.25], [0, -b, 0]))
         }
-        g.add(this.solid(part, box(0.16, 0.05, 0.1), [0.22, 0.27, 0.12]))
+        g.add(this.solid(part, box(0.18, 0.04, 0.12), [0.24, 0.3, 0.14]))
+        g.add(this.polyline(part, [new THREE.Vector3(0.24, 0.32, 0.2), new THREE.Vector3(0.2, 0.5, 0.18), new THREE.Vector3(0.12, 0.7, 0.12)]))
       } else if (v === 'magnetometer') {
         g.add(this.solid(part, box(0.06, 0.06, 1.1), [-0.62, 1.06, 0.62], [0, Math.PI / 4, 0]))
-        g.add(this.solid(part, cyl(0.07, 0.24, 14), [-1.02, 1.06, 1.02], [Math.PI / 2, 0, Math.PI / 4], 1))
+        for (const d of [0.35, 0.75]) g.add(this.solid(part, box(0.09, 0.09, 0.03), [-d * 0.707 - 0.24, 1.06, d * 0.707 + 0.24], [0, Math.PI / 4, 0]))
+        g.add(this.solid(part, cyl(0.07, 0.26, 16), [-1.02, 1.06, 1.02], [Math.PI / 2, 0, Math.PI / 4], 1))
+        g.add(this.solid(part, cyl(0.05, 0.04, 16), [-1.12, 1.06, 1.12], [Math.PI / 2, 0, Math.PI / 4], 1))
       } else {
-        g.add(this.solid(part, box(0.9, 0.04, 0.62), [0, 0.2, 0]))
-        for (const x of [-0.3, -0.1, 0.1, 0.3]) g.add(this.polyline(part, [new THREE.Vector3(x, 0.225, -0.25), new THREE.Vector3(x, 0.225, 0.25)]))
-        g.add(this.solid(part, box(0.2, 0.06, 0.14), [0.3, 0.26, -0.2]))
+        g.add(this.solid(part, prism(roundedRect(0.92, 0.64, 0.06), 0.045), [0, 0.2, 0]))
+        for (const x of [-0.3, -0.1, 0.1, 0.3]) g.add(this.outline(part, [[x - 0.05, 0.2235, -0.24], [x + 0.05, 0.2235, -0.24], [x + 0.05, 0.2235, 0.24], [x - 0.05, 0.2235, 0.24]]))
+        g.add(this.solid(part, box(0.2, 0.06, 0.14), [0.32, 0.25, -0.22]))
+        for (const [x, z] of [[-0.42, -0.28], [0.42, -0.28], [-0.42, 0.28], [0.42, 0.28]]) g.add(this.screw(part, [x, 0.226, z]))
       }
     } else if (slot === 'gas') {
       g.position.set(0.8, 1.2, 0)
+      g.add(this.solid(part, box(0.04, 0.2, 0.2), [-0.13, 0, 0]))
+      for (const y of [-0.06, 0.06]) g.add(this.screw(part, [-0.105, y, 0.06], 'x', 0.016))
       if (v === 'voc') {
-        g.add(this.solid(part, cyl(0.12, 0.36, 16), [0, 0, 0], [0, 0, 0], 1))
-        for (const y of [-0.1, -0.04, 0.02, 0.08]) g.add(this.circle(part, 0.125, y, 24))
-        g.add(this.solid(part, cyl(0.08, 0.05, 14), [0, 0.2, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.12, 0.3, 18), [0, -0.02, 0], [0, 0, 0], 1))
+        for (const y of [-0.12, -0.07, -0.02, 0.03, 0.08]) g.add(this.circle(part, 0.123, y, 24))
+        g.add(this.solid(part, cyl(0.1, 0.05, 18), [0, 0.155, 0], [0, 0, 0], 1))
+        for (let k = 0; k < 6; k++) {
+          const b = (k / 6) * Math.PI
+          g.add(this.polyline(part, [new THREE.Vector3(Math.cos(b) * 0.09, 0.181, Math.sin(b) * 0.09), new THREE.Vector3(-Math.cos(b) * 0.09, 0.181, -Math.sin(b) * 0.09)]))
+        }
       } else if (v === 'co2') {
-        g.add(this.solid(part, cyl(0.09, 0.52, 16), [0.02, 0, 0], [Math.PI / 2, 0, 0], 1))
-        for (const z of [-0.28, 0.28]) g.add(this.solid(part, cyl(0.1, 0.04, 16), [0.02, 0, z], [Math.PI / 2, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.09, 0.5, 18), [0.02, 0, 0], [Math.PI / 2, 0, 0], 1))
+        for (const z of [-0.26, 0.26]) g.add(this.solid(part, cyl(0.1, 0.04, 18), [0.02, 0, z], [Math.PI / 2, 0, 0], 1))
+        for (const z of [-0.14, 0, 0.14]) g.add(this.solid(part, box(0.2, 0.02, 0.02), [0.02, 0.09, z]))
       } else {
-        g.add(this.solid(part, box(0.2, 0.3, 0.34), [0, 0, 0]))
-        for (const z of [-0.1, 0, 0.1]) g.add(this.solid(part, cyl(0.045, 0.05, 12), [0.12, 0.05, z], [0, 0, Math.PI / 2], 1))
+        g.add(this.solid(part, prism(roundedRect(0.22, 0.34, 0.03), 0.3), [0, 0, 0]))
+        for (const z of [-0.1, 0, 0.1]) {
+          g.add(this.solid(part, cyl(0.045, 0.05, 14), [0.13, 0.05, z], [0, 0, Math.PI / 2], 1))
+          g.add(this.solid(part, cyl(0.03, 0.02, 14), [0.16, 0.05, z], [0, 0, Math.PI / 2], 1))
+        }
+        g.add(this.outline(part, [[0.111, -0.08, -0.12], [0.111, -0.08, 0.12], [0.111, -0.04, 0.12], [0.111, -0.04, -0.12]]))
       }
     } else {
       g.position.set(-0.42, 1.52, -0.42)
+      g.add(this.solid(part, cyl(0.06, 0.02, 14), [0, 0.01, 0], [0, 0, 0], 1))
+      g.add(this.solid(part, cyl(0.03, 0.06, 6), [0, 0.05, 0], [0, 0, 0], 1))
       if (v === 'video58') {
-        g.add(this.solid(part, cyl(0.022, 0.55, 8), [0, 0.28, 0], [0, 0, 0], 1))
-        g.add(this.solid(part, new THREE.IcosahedronGeometry(0.08, 0), [0, 0.6, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.02, 0.5, 8), [0, 0.33, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.03, 0.08, 10), [0, 0.12, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, new THREE.IcosahedronGeometry(0.085, 0), [0, 0.63, 0], [0, 0, 0], 1))
       } else if (v === 'mesh') {
-        g.add(this.solid(part, cyl(0.02, 0.62, 8), [-0.1, 0.31, 0], [0, 0, 0], 1))
-        g.add(this.solid(part, cyl(0.02, 0.45, 8), [0.1, 0.23, 0], [0, 0, 0], 1))
-        g.add(this.solid(part, box(0.3, 0.05, 0.1), [0, 0.02, 0]))
+        g.add(this.solid(part, box(0.34, 0.04, 0.1), [0, 0.1, 0]))
+        g.add(this.solid(part, cyl(0.02, 0.6, 8), [-0.13, 0.42, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.02, 0.44, 8), [0.13, 0.34, 0], [0, 0, 0], 1))
+        for (const x of [-0.13, 0.13]) g.add(this.solid(part, cyl(0.03, 0.05, 10), [x, 0.14, 0], [0, 0, 0], 1))
       } else {
-        g.add(this.solid(part, box(0.22, 0.32, 0.05), [0, 0.2, 0]))
-        g.add(this.solid(part, box(0.12, 0.05, 0.12), [0, 0.02, 0]))
+        g.add(this.solid(part, prism(roundedRect(0.22, 0.06, 0.025), 0.34), [0, 0.25, 0]))
+        g.add(this.outline(part, [[-0.07, 0.15, 0.031], [0.07, 0.15, 0.031], [0.07, 0.36, 0.031], [-0.07, 0.36, 0.031]]))
+        g.add(this.solid(part, box(0.12, 0.05, 0.12), [0, 0.06, 0]))
       }
     }
     this.piece(part, g, this.slotExplode[slot])
