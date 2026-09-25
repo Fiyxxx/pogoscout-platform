@@ -160,6 +160,9 @@ def reset_dev_data(confirmed: bool) -> int:
         elif target.exists():
             target.unlink()
             print(f"deleted {target.resolve()}")
+    # Keep the tracked placeholder so the directory stays in the repository.
+    settings.image_dir.mkdir(parents=True, exist_ok=True)
+    (settings.image_dir / ".gitkeep").touch()
     print("reset done. Restart the API before seeding (it keeps the old database open).")
     return 0
 
@@ -176,6 +179,8 @@ def main() -> None:
     load.add_argument("--mission-id")
     seed = sub.add_parser("seed", help="create the demo mission set in a running API")
     seed.add_argument("--api", default="http://127.0.0.1:8000/api/v1")
+    tiles = sub.add_parser("tiles", help="pre-fetch theatre map tiles through a running API")
+    tiles.add_argument("--api", default="http://127.0.0.1:8000/api/v1")
     reset = sub.add_parser("reset", help="delete the dev database and image directory")
     reset.add_argument("--yes", action="store_true", help="confirm deletion")
     args = parser.parse_args()
@@ -186,6 +191,10 @@ def main() -> None:
         export_contracts()
     elif args.command == "seed":
         seed_demo(args.api)
+    elif args.command == "tiles":
+        from pogoscout_api.tiles.warm import warm_tiles
+
+        warm_tiles(args.api)
     elif args.command == "reset":
         sys.exit(reset_dev_data(args.yes))
     else:

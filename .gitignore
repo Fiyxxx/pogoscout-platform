@@ -12,3 +12,4 @@ coverage/
 data/*.sqlite3*
 data/images/*
 !data/images/.gitkeep
+data/tiles/

@@ -5,10 +5,12 @@ import type { MissionSummary } from '../../api/types'
 import { shortDate } from '../../lib/format'
 import { isMaterial, MATERIAL_COLORS, MATERIAL_NAMES } from '../../lib/materials'
 import { missionDuration, statusView } from '../../lib/status'
-import { MiniMap } from './MiniMap'
+import { MiniMap, type MiniMapData } from './MiniMap'
 
-export function MissionPreview({ mission: m, style, onClose }: { mission: MissionSummary; style?: React.CSSProperties; onClose?: () => void }) {
-  const cells = useQuery({ queryKey: keys.cells(m.id), queryFn: () => api.cells(m.id) })
+export function MissionPreview({ mission: m, style, onClose, map }: { mission: MissionSummary; style?: React.CSSProperties; onClose?: () => void; map?: MiniMapData }) {
+  // Callers that already hold the cells (the theatre) pass them in and skip the full download.
+  const cells = useQuery({ queryKey: keys.cells(m.id), queryFn: () => api.cells(m.id), enabled: !map })
+  const mapData = map ?? cells.data
   const st = statusView(m)
   const total = Object.values(m.stats.materials).reduce((a, b) => a + b, 0)
   const mix = Object.entries(m.stats.materials)
@@ -52,7 +54,7 @@ export function MissionPreview({ mission: m, style, onClose }: { mission: Missio
           backgroundImage: 'linear-gradient(#171716 1px, transparent 1px), linear-gradient(90deg, #171716 1px, transparent 1px)', backgroundSize: '20px 20px',
         }}
       >
-        {cells.data && <MiniMap data={cells.data} width={370} height={298} />}
+        {mapData && <MiniMap data={mapData} width={370} height={298} />}
         {m.status_note && (
           <span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 12, padding: '4px 8px', background: 'var(--bg)', border: '1px solid var(--line-strong)' }}>
             {m.status_note}

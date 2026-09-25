@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite+pysqlite:///../../data/pogoscout.sqlite3"
     image_dir: Path = Path("../../data/images")
+    tile_cache_dir: Path = Path("../../data/tiles")
     fixture_dir: Path = Path("../../fixtures")
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 

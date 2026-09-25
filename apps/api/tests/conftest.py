@@ -31,6 +31,7 @@ def make_settings(tmp_path: Path, **overrides) -> Settings:
     values = {
         "database_url": f"sqlite+pysqlite:///{tmp_path / 'test.sqlite3'}",
         "image_dir": tmp_path / "images",
+        "tile_cache_dir": tmp_path / "tiles",
         "fixture_dir": FIXTURE_DIR,
         "worker_enabled": False,  # tests drain jobs deterministically
         "mock_latency_s": 0.0,

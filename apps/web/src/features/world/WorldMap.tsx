@@ -24,37 +24,30 @@ const TERRAIN_EXAGGERATION = 1.5
 const OVERVIEW = { center: [103.81, 1.318] as [number, number], zoom: 11.15, pitch: 50, bearing: -12 }
 const SIGNAL = '#ff5a1f'
 
+/** Absolute URL: MapLibre resolves tile templates in a worker, where relative paths do not work. */
+function tileUrl(layer: 'imagery' | 'labels' | 'terrain'): string {
+  return `${window.location.origin}/api/v1/tiles/${layer}/{z}/{x}/{y}`
+}
+
 const STYLE: StyleSpecification = {
   version: 8,
   sources: {
-    // Keyless basemap: Esri World Imagery with Esri place labels.
-    labels: {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      maxzoom: 19,
-    },
+    // Served by the platform's tile cache (see apps/api tiles/), which fetches upstream once.
+    labels: { type: 'raster', tiles: [tileUrl('labels')], tileSize: 256, maxzoom: 19 },
     satellite: {
       type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tiles: [tileUrl('imagery')],
       tileSize: 256,
       maxzoom: 19,
       attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
     },
     terrainDem: {
       type: 'raster-dem',
-      tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+      tiles: [tileUrl('terrain')],
       encoding: 'terrarium',
       tileSize: 256,
       maxzoom: 15,
       attribution: 'Elevation © Mapzen, AWS Terrain Tiles',
-    },
-    shadeDem: {
-      type: 'raster-dem',
-      tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-      encoding: 'terrarium',
-      tileSize: 256,
-      maxzoom: 15,
     },
   },
   layers: [
@@ -62,10 +55,6 @@ const STYLE: StyleSpecification = {
     {
       id: 'satellite', type: 'raster', source: 'satellite',
       paint: { 'raster-saturation': -0.55, 'raster-brightness-max': 0.62, 'raster-contrast': 0.08 },
-    },
-    {
-      id: 'hillshade', type: 'hillshade', source: 'shadeDem',
-      paint: { 'hillshade-shadow-color': '#000000', 'hillshade-highlight-color': '#5a5a56', 'hillshade-accent-color': '#161615', 'hillshade-exaggeration': 0.25 },
     },
     { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.8 } },
   ],
@@ -98,40 +87,61 @@ function toGeoJSON(missions: WorldMission[]) {
   return { cells: fc(cells), detections: fc(detections), outlines: fc(outlines) }
 }
 
+const GROUPS = ['done', 'live'] as const
+type GroupName = (typeof GROUPS)[number]
+const layerIds = (kind: 'cells' | 'outlines' | 'hotspots' | 'metal' | 'voc') => GROUPS.map((g) => `${g}-${kind}`)
+
+/** Cheap change signature: cell counts, hops and detections per mission. */
+function signature(missions: WorldMission[]): string {
+  return missions
+    .map((w) => {
+      const s = w.mission.stats
+      const classified = Object.values(s.materials).reduce((a, b) => a + b, 0)
+      return `${w.mission.id}:${w.cells.length}:${s.hops}:${s.metal}:${s.voc}:${classified}`
+    })
+    .join('|')
+}
+
 function addMissionLayers(map: MapLibreMap) {
   const empty: FeatureCollection = { type: 'FeatureCollection', features: [] }
-  map.addSource('cells', { type: 'geojson', data: empty })
-  map.addSource('detections', { type: 'geojson', data: empty })
-  map.addSource('outlines', { type: 'geojson', data: empty })
-  map.addLayer({
-    id: 'cells', type: 'fill', source: 'cells', minzoom: 14,
-    paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.5, 0.6, 17.5, 0.92] },
-  })
-  map.addLayer({
-    id: 'outlines', type: 'line', source: 'outlines', minzoom: 13,
-    paint: { 'line-color': '#f2f2f0', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0, 14, 0.5], 'line-width': 1, 'line-dasharray': [3, 3] },
-  })
-  map.addLayer({
-    id: 'hotspots', type: 'heatmap', source: 'detections',
-    paint: {
-      'heatmap-weight': ['get', 'weight'],
-      'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.2, 15, 2.2],
-      'heatmap-radius': ['interpolate', ['exponential', 1.6], ['zoom'], 9, 12, 13, 26, 16, 60, 18, 120],
-      'heatmap-color': [
-        'interpolate', ['linear'], ['heatmap-density'],
-        0, 'rgba(255,90,31,0)', 0.15, 'rgba(255,90,31,0.22)', 0.45, 'rgba(255,90,31,0.55)', 0.75, 'rgba(255,90,31,0.85)', 1, '#ffd2bd',
-      ],
-      'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0.9, 17.5, 0.3],
-    },
-  })
-  map.addLayer({
-    id: 'metal', type: 'circle', source: 'detections', minzoom: 15.5, filter: ['==', ['get', 'kind'], 'metal'],
-    paint: { 'circle-color': SIGNAL, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 2.5, 18, 6], 'circle-stroke-color': '#0a0a0a', 'circle-stroke-width': 1 },
-  })
-  map.addLayer({
-    id: 'voc', type: 'circle', source: 'detections', minzoom: 15.5, filter: ['==', ['get', 'kind'], 'voc'],
-    paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 3, 18, 7], 'circle-stroke-color': '#f2f2f0', 'circle-stroke-width': 1.5 },
-  })
+  for (const g of GROUPS) {
+    map.addSource(`${g}-cells`, { type: 'geojson', data: empty, buffer: 16, tolerance: 0.5 })
+    map.addSource(`${g}-detections`, { type: 'geojson', data: empty })
+    map.addSource(`${g}-outlines`, { type: 'geojson', data: empty })
+  }
+  for (const g of GROUPS) {
+    map.addLayer({
+      id: `${g}-cells`, type: 'fill', source: `${g}-cells`, minzoom: 14,
+      paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.5, 0.6, 17.5, 0.92] },
+    })
+    map.addLayer({
+      id: `${g}-outlines`, type: 'line', source: `${g}-outlines`, minzoom: 13,
+      paint: { 'line-color': '#f2f2f0', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0, 14, 0.5], 'line-width': 1, 'line-dasharray': [3, 3] },
+    })
+  }
+  for (const g of GROUPS) {
+    map.addLayer({
+      id: `${g}-hotspots`, type: 'heatmap', source: `${g}-detections`,
+      paint: {
+        'heatmap-weight': ['get', 'weight'],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.2, 15, 2.2],
+        'heatmap-radius': ['interpolate', ['exponential', 1.6], ['zoom'], 9, 12, 13, 26, 16, 60, 18, 120],
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(255,90,31,0)', 0.15, 'rgba(255,90,31,0.22)', 0.45, 'rgba(255,90,31,0.55)', 0.75, 'rgba(255,90,31,0.85)', 1, '#ffd2bd',
+        ],
+        'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0.9, 17.5, 0.3],
+      },
+    })
+    map.addLayer({
+      id: `${g}-metal`, type: 'circle', source: `${g}-detections`, minzoom: 15.5, filter: ['==', ['get', 'kind'], 'metal'],
+      paint: { 'circle-color': SIGNAL, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 2.5, 18, 6], 'circle-stroke-color': '#0a0a0a', 'circle-stroke-width': 1 },
+    })
+    map.addLayer({
+      id: `${g}-voc`, type: 'circle', source: `${g}-detections`, minzoom: 15.5, filter: ['==', ['get', 'kind'], 'voc'],
+      paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 3, 18, 7], 'circle-stroke-color': '#f2f2f0', 'circle-stroke-width': 1.5 },
+    })
+  }
 }
 
 /** Frames all missions (or the island when there are none), leaving room for the side panel. */
@@ -178,6 +188,7 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
   const ready = useRef(false)
   const markers = useRef(new Map<string, { marker: Marker; el: HTMLElement }>())
   const scouts = useRef(new Map<string, Marker>())
+  const sent = useRef<Record<GroupName, string | null>>({ done: null, live: null })
   const latest = useRef({ missions, focused, onFocus })
   latest.current = { missions, focused, onFocus }
 
@@ -187,6 +198,9 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
       style: STYLE,
       ...OVERVIEW,
       maxPitch: 78,
+      fadeDuration: 120,
+      maxTileCacheSize: 2048,
+      refreshExpiredTiles: false,
       attributionControl: false,
       canvasContextAttributes: { antialias: true },
     })
@@ -198,14 +212,19 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
       ready.current = true
       sync(map)
     })
-    map.on('click', 'outlines', (e) => {
-      const id = e.features?.[0]?.properties?.mission
-      if (id) latest.current.onFocus(id)
-    })
+    for (const id of layerIds('outlines')) {
+      map.on('click', id, (e) => {
+        const mission = e.features?.[0]?.properties?.mission
+        if (mission) latest.current.onFocus(mission)
+      })
+    }
     mapRef.current = map
     const markerMap = markers.current
     const scoutMap = scouts.current
+    const sentGroups = sent.current
     return () => {
+      sentGroups.done = null
+      sentGroups.live = null
       ready.current = false
       markerMap.clear()
       scoutMap.clear()
@@ -217,10 +236,17 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
   function sync(map: MapLibreMap) {
     if (!ready.current) return
     const { missions: list, focused: focusId } = latest.current
-    const data = toGeoJSON(list)
-    ;(map.getSource('cells') as GeoJSONSource).setData(data.cells)
-    ;(map.getSource('detections') as GeoJSONSource).setData(data.detections)
-    ;(map.getSource('outlines') as GeoJSONSource).setData(data.outlines)
+    // Finished missions are sent once; the live group only when its data actually changed.
+    for (const g of GROUPS) {
+      const group = list.filter((w) => (w.mission.status === 'live') === (g === 'live'))
+      const sig = signature(group)
+      if (sent.current[g] === sig) continue
+      sent.current[g] = sig
+      const data = toGeoJSON(group)
+      ;(map.getSource(`${g}-cells`) as GeoJSONSource).setData(data.cells)
+      ;(map.getSource(`${g}-detections`) as GeoJSONSource).setData(data.detections)
+      ;(map.getSource(`${g}-outlines`) as GeoJSONSource).setData(data.outlines)
+    }
 
     const seen = new Set<string>()
     for (const w of list) {
@@ -298,8 +324,8 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
     if (!map) return
     const apply = () => {
       if (!ready.current) return
-      map.setLayoutProperty('hotspots', 'visibility', layers.hotspots ? 'visible' : 'none')
-      for (const id of ['cells', 'outlines']) map.setLayoutProperty(id, 'visibility', layers.footprints ? 'visible' : 'none')
+      for (const id of layerIds('hotspots')) map.setLayoutProperty(id, 'visibility', layers.hotspots ? 'visible' : 'none')
+      for (const id of [...layerIds('cells'), ...layerIds('outlines')]) map.setLayoutProperty(id, 'visibility', layers.footprints ? 'visible' : 'none')
     }
     if (map.isStyleLoaded()) apply()
     else map.once('load', apply)

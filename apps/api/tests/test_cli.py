@@ -22,7 +22,10 @@ def test_reset_requires_yes_and_deletes_db_and_images(tmp_path, monkeypatch, cap
     assert db.exists() and images.exists()
 
     assert cli.reset_dev_data(confirmed=True) == 0
-    assert not any(tmp_path.iterdir())
+    # Database files and captures are gone; the image directory is recreated empty with its
+    # tracked placeholder.
+    assert [p.name for p in tmp_path.iterdir()] == ["images"]
+    assert [p.name for p in (tmp_path / "images").iterdir()] == [".gitkeep"]
 
 
 def test_reset_cli_exit_code(monkeypatch) -> None:

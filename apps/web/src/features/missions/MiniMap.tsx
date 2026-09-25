@@ -1,9 +1,15 @@
 import type { CellsResponse } from '../../api/types'
+
+/** The parts of a mission the mini map draws; a full CellsResponse satisfies it. */
+export type MiniMapData = {
+  bounds: CellsResponse['bounds']
+  cells: { x: number; y: number; metal: string; material: { status: string; label: string | null } }[]
+}
 import { cellKey } from '../../lib/cells'
 import { isMaterial, MATERIAL_COLORS } from '../../lib/materials'
 
 /** Flat material map of a mission, for previews. Highlights one cell when given. */
-export function MiniMap({ data, width, height, highlight, maxCell = 34 }: { data: CellsResponse; width: number; height: number; highlight?: string; maxCell?: number }) {
+export function MiniMap({ data, width, height, highlight, maxCell = 34 }: { data: MiniMapData; width: number; height: number; highlight?: string; maxCell?: number }) {
   if (data.cells.length === 0) {
     return (
       <div className="empty" style={{ width, height, fontSize: 13 }}>

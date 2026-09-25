@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { api, keys } from '../api/client'
 import type { WorldMission } from '../api/types'
+import type { MiniMapData } from '../features/missions/MiniMap'
 import { NavTabs } from '../components/NavTabs'
 import { HealthLights, TopBar } from '../components/TopBar'
 import { MissionPreview } from '../features/missions/MissionPreview'
@@ -23,7 +24,8 @@ export function WorldPage() {
   }, [])
 
   const missions = world.data?.missions ?? []
-  const focusedMission = missions.find((w) => w.mission.id === focused)?.mission
+  const focusedWorld = missions.find((w) => w.mission.id === focused)
+  const focusedMission = focusedWorld?.mission
   const totals = {
     live: missions.filter((w) => w.mission.status === 'live').length,
     metal: missions.reduce((a, w) => a + w.mission.stats.metal, 0),
@@ -76,6 +78,7 @@ export function WorldPage() {
         {focusedMission && (
           <MissionPreview
             mission={focusedMission}
+            map={focusedWorld && miniMapFrom(focusedWorld)}
             onClose={() => setFocused(null)}
             style={{ position: 'absolute', right: 20, top: 20, bottom: 84, border: '1px solid var(--line-strong)', background: 'rgba(10,10,10,.94)' }}
           />
@@ -121,6 +124,21 @@ export function WorldPage() {
       {creating && <NewMissionDialog onClose={() => setCreating(false)} />}
     </div>
   )
+}
+
+/** Mini map data from the theatre's compact cells, so the preview needs no extra request. */
+function miniMapFrom(w: WorldMission): MiniMapData {
+  const xs = w.cells.map((c) => c[0])
+  const ys = w.cells.map((c) => c[1])
+  return {
+    bounds: { min_x: Math.min(0, ...xs), max_x: Math.max(0, ...xs), min_y: Math.min(0, ...ys), max_y: Math.max(0, ...ys) },
+    cells: w.cells.map(([x, y, label, metal]) => ({
+      x,
+      y,
+      metal: metal ? 'detected' : 'not_detected',
+      material: { status: label ? 'succeeded' : 'queued', label },
+    })),
+  }
 }
 
 const panel: React.CSSProperties = {
