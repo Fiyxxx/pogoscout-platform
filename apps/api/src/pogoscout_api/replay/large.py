@@ -2,11 +2,13 @@
 
 district_sweep_v1  48 x 40 Singapore-style district, boustrophedon rows along x, ~2000 hops
 canal_corridor_v1  8 x 150 corridor along a canal, serpentine across the width, ~1200 hops
+jungle_patrol_v1   44 x 32 rainforest patrol with a stream, trail, swamp and clearing, ~1400 hops
 
 Terrain comes from seeded value noise; every choice draws from a seeded `random.Random`, so the
 same seed gives a byte-identical scenario.json and expected_projection.json.
 """
 
+import math
 import random
 from collections.abc import Callable
 from pathlib import Path
@@ -415,7 +417,104 @@ def build_canal_corridor(out_dir: Path, seed: int = 924) -> None:
     )
 
 
+# jungle_patrol_v1 -----------------------------------------------------------------------------
+
+JUNGLE_W, JUNGLE_H = 44, 32
+JUNGLE_BACKTRACKS: dict[tuple[int, int], int] = {(9, 6): 2, (24, 15): 3, (34, 22): 3, (12, 25): 2}
+# Fallen trees across the row.
+JUNGLE_OBSTACLES = {(18, 10), (30, 27), (5, 19)}
+FORD = (25, 15)
+CLEARING = (34, 22)
+SWAMP = (9, 25)
+TRAIL_CACHE = (9, 6)
+
+
+def stream_x(y: float) -> float:
+    """Centre line of the stream, meandering north across the patrol area."""
+    return 24 + 5 * math.sin(y / 5.5) + 1.6 * math.sin(y / 2.3 + 1)
+
+
+def trail_distance(x: int, y: int) -> float:
+    """Distance to the footpath running from the south-west to the north-east."""
+    (x0, y0), (x1, y1) = (0, 4), (43, 28)
+    return abs((y1 - y0) * x - (x1 - x0) * y + x1 * y0 - y1 * x0) / math.hypot(x1 - x0, y1 - y0)
+
+
+def jungle_cell(x: int, y: int, seed: int) -> tuple[str, str]:
+    """(zone, material) for secondary rainforest in the Central Catchment."""
+    bank = abs(x - stream_x(y)) + (value_noise(x, y, 2.5, seed) - 0.5) * 0.8
+    if bank < 0.9:
+        return "stream", "water"
+    if math.dist((x, y), FORD) < 2.3 and trail_distance(x, y) < 1.6:
+        return "ford", "gravel"  # stones laid where the trail crosses
+    if bank < 2.1:
+        return "bank", "mud"
+    if trail_distance(x, y) < 0.8:
+        return "trail", "soil"
+    clearing = ellipse_distance(x, y, *CLEARING, 4.6, 3.6)
+    if clearing + (value_noise(x, y, 2, seed + 1) - 0.5) * 0.4 < 1:
+        return "clearing", "soil" if value_noise(x, y, 1.5, seed + 2) > 0.7 else "grass_vegetation"
+    swamp = ellipse_distance(x, y, *SWAMP, 3.8, 2.6)
+    if swamp + (value_noise(x, y, 2, seed + 3) - 0.5) * 0.6 < 1:
+        return "swamp", "water" if value_noise(x, y, 1.8, seed + 4) > 0.72 else "mud"
+    if fractal_noise(x, y, 4, seed + 5) > 0.7:
+        return "forest", "grass_vegetation"  # ferns and undergrowth in light gaps
+    if fractal_noise(x, y, 3, seed + 6) > 0.78:
+        return "forest", "soil"  # bare, trampled patches
+    return "forest", "leaf_litter"
+
+
+def build_jungle_patrol(out_dir: Path, seed: int = 926) -> None:
+    b = FixtureBuilder("jungle_patrol_v1", out_dir, seed)
+    rng = random.Random(seed)
+    commands = boustrophedon(
+        JUNGLE_W, JUNGLE_H, backtracks=JUNGLE_BACKTRACKS, obstacles=JUNGLE_OBSTACLES
+    )
+    visited = set(walk(commands))
+    cells = {(x, y): jungle_cell(x, y, seed) for x in range(JUNGLE_W) for y in range(JUNGLE_H)}
+    grid = {cell: material for cell, (_, material) in cells.items()}
+    # Forest floor is hard to call at every zone edge.
+    zones = {cell: zone for cell, (zone, _) in cells.items()}
+    soft = {
+        cell
+        for cell in boundary_cells(zones, lambda a, c: True)
+        if cell in visited and rng.random() < 0.55
+    }
+
+    # Three dense metal clusters make clear hotspots; a few stray readings elsewhere.
+    taken: set[tuple[int, int]] = set()
+    metal: set[tuple[int, int]] = set()
+    for centre, count in ((TRAIL_CACHE, 9), (FORD, 8), (CLEARING, 7)):
+        metal |= pick_near(rng, centre, 2, count, visited, taken)
+    for cell in rng.sample(sorted(visited - taken), 3):
+        metal.add(cell)
+        taken.add(cell)
+    voc: set[tuple[int, int]] = set()
+    voc |= pick_near(rng, (CLEARING[0] - 1, CLEARING[1] + 2), 3, 7, visited, taken)
+    voc |= pick_near(rng, SWAMP, 2, 4, visited, taken)
+
+    plan = SurveyPlan(b, commands, grid, metal, voc, soft, rng, confusion=0.35)
+    hops = plan.hop_count
+    plan.choose_faults(
+        errors=round(hops * 0.015),  # canopy and humidity cost more readings than in town
+        missing=round(hops * 0.008),
+        no_image=round(hops * 0.006),
+        out_of_order=True,
+        duplicate=False,
+    )
+    plan.emit()
+    b.write_large(
+        f"Rainforest patrol in the Central Catchment, {JUNGLE_W} x {JUNGLE_H} cells ({hops} "
+        "hops): leaf litter under canopy, a meandering stream with muddy banks, a trail with a "
+        f"gravel ford, a swamp and a clearing. {len(metal)} metal anomalies in three clusters "
+        f"(trail, ford, clearing), {len(voc)} VOC cues around the clearing and swamp. "
+        "Screenshots are generated at replay time.",
+        "Jungle patrol",
+    )
+
+
 LARGE_BUILDERS = {
     "district_sweep_v1": build_district_sweep,
     "canal_corridor_v1": build_canal_corridor,
+    "jungle_patrol_v1": build_jungle_patrol,
 }

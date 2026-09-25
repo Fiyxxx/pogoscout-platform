@@ -11,6 +11,8 @@ SCENARIO_SITES: dict[str, GeoAnchor] = {
     "failures_v1": GeoAnchor(lat=1.3336, lon=103.7893, heading_deg=110, cell_m=1.5),
     # Jurong Lake Gardens.
     "park_connector_v1": GeoAnchor(lat=1.3406, lon=103.7268, heading_deg=35, cell_m=2.0),
+    # Central Catchment Nature Reserve, rainforest west of MacRitchie Reservoir.
+    "jungle_patrol_v1": GeoAnchor(lat=1.3552, lon=103.8048, heading_deg=15, cell_m=2.0),
     # Pasir Laba training area.
     "clean_baseline_v1": GeoAnchor(lat=1.3441, lon=103.6772, heading_deg=0, cell_m=2.0),
 }

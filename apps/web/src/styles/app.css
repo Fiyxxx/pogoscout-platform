@@ -90,3 +90,9 @@ input::placeholder { color: var(--faint); }
 .maplibregl-ctrl-attrib-button { filter: invert(1); }
 .maplibregl-ctrl-scale { background: rgba(10, 10, 10, 0.8); color: var(--muted); border-color: var(--muted); font-family: var(--font-mono); }
 .maplibregl-ctrl-bottom-left { left: 352px !important; bottom: 8px !important; }
+/* MapLibre zoom and compass buttons in the monochrome style */
+.maplibregl-ctrl-group { background: rgba(10, 10, 10, 0.85) !important; border: 1px solid var(--line-strong); border-radius: 0 !important; box-shadow: none !important; }
+.maplibregl-ctrl-group button { width: 36px !important; height: 36px !important; }
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--line-strong) !important; }
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+.maplibregl-ctrl-group button:hover { background: var(--hover) !important; }

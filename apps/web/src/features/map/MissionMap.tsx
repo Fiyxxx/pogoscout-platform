@@ -43,6 +43,16 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
   useEffect(() => sceneRef.current?.update(data), [data])
   useEffect(() => sceneRef.current?.setOptions({ layer, view, metric, selected }), [layer, view, metric, selected])
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === '+' || e.key === '=') sceneRef.current?.zoomBy(-400)
+      if (e.key === '-' || e.key === '_') sceneRef.current?.zoomBy(400)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   if (!supported) return <div className="empty">3D rendering is not available in this browser.</div>
 
   return (
@@ -115,6 +125,14 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
         {view === '3d' && metric === 'uncertainty' && (
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>Height shows classification uncertainty, not terrain.</span>
         )}
+      </div>
+      <div style={{ position: 'absolute', right: 20, bottom: 16, display: 'flex', flexDirection: 'column', border: '1px solid var(--line-strong)', background: 'rgba(10,10,10,.8)' }}>
+        <button className="btn" aria-label="Zoom in (+)" title="Zoom in (+)" style={{ width: 40, height: 40, padding: 0, border: 'none', borderBottom: '1px solid var(--line-strong)' }} onClick={() => sceneRef.current?.zoomBy(-400)}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <button className="btn" aria-label="Zoom out (-)" title="Zoom out (-)" style={{ width: 40, height: 40, padding: 0, border: 'none' }} onClick={() => sceneRef.current?.zoomBy(400)}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M5 12h14" /></svg>
+        </button>
       </div>
       <span className="mono" style={{ position: 'absolute', left: 20, bottom: 16, fontSize: 11, color: 'var(--faint)', pointerEvents: 'none' }}>
         1 cell = 1 hop

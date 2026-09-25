@@ -355,7 +355,7 @@ export class MissionScene {
   }
 
   zoomBy(deltaY: number) {
-    this.zoom = Math.min(3, Math.max(0.12, this.zoom * Math.exp(deltaY * 0.001)))
+    this.zoom = Math.min(4, Math.max(0.06, this.zoom * Math.exp(deltaY * 0.001)))
   }
 
   /** Flies the camera to a cell and moves in close. */
@@ -363,7 +363,7 @@ export class MissionScene {
     const s = this.states.get(key)
     if (!s) return
     this.targetGoal.set(s.cell.x, 0, -s.cell.y)
-    this.zoom = Math.min(this.zoom, Math.max(0.12, 14 / this.baseRadius))
+    this.zoom = Math.min(this.zoom, Math.max(0.06, 14 / this.baseRadius))
     this.autoFrame = false
   }
 

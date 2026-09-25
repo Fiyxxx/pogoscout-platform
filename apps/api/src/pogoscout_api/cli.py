@@ -73,6 +73,7 @@ DEMO_SET: list[DemoMission] = [
         "failures_v1", "PS-0924-02", "Drainage Culvert", "aborted", "Link lost after hop 9"
     ),
     DemoMission("canal_corridor_v1", "PS-0924-04", "Canal Corridor Survey"),
+    DemoMission("jungle_patrol_v1", "PS-0924-05", "Central Catchment Patrol"),
     DemoMission("district_sweep_v1", "PS-0925-01", "Sector 7 Sweep", live_fraction=0.85),
 ]
 ADVANCE_CHUNK = 500

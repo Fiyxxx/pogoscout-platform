@@ -1,5 +1,5 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { AttributionControl, type GeoJSONSource, LngLatBounds, Map as MapLibreMap, Marker, ScaleControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl'
+import { AttributionControl, type GeoJSONSource, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, ScaleControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { Feature, FeatureCollection } from 'geojson'
 import { useEffect, useRef } from 'react'
@@ -191,6 +191,7 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
       canvasContextAttributes: { antialias: true },
     })
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
+    map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-left')
     map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
     map.on('load', () => {
       addMissionLayers(map)
