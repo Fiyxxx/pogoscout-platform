@@ -5,9 +5,9 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from pogoscout_api.domain.hops import HopPayload
-from pogoscout_api.domain.projection import PlacedHop, project
-from pogoscout_api.persistence.db import EventRow, HopRow, utcnow
+from pogoscout_api.application import positions
+from pogoscout_api.domain.projection import PlacedHop
+from pogoscout_api.persistence.db import EventRow, utcnow
 
 LEVELS: dict[str, str] = {
     "hop_accepted": "info",
@@ -77,12 +77,7 @@ def record_placement(session: Session, mission_id: str, hop: PlacedHop) -> None:
 
 
 def hop_position(session: Session, mission_id: str, hop_id: int) -> tuple[int, int] | None:
-    rows = session.scalars(select(HopRow).where(HopRow.mission_id == mission_id))
-    projection = project({r.hop_id: HopPayload.model_validate(r.payload) for r in rows})
-    for placed in projection.placed:
-        if placed.hop_id == hop_id:
-            return placed.x, placed.y
-    return None
+    return positions.hop_position(session, mission_id, hop_id)
 
 
 def list_events(session: Session, mission_id: str, limit: int) -> list[EventRow]:

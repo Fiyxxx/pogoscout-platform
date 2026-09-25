@@ -136,3 +136,18 @@ export type Health = {
 export type LiveMessage =
   | { type: 'changed'; mission_id: string; topics: string[]; hop_id: number | null }
   | { type: 'ping' }
+
+/** GPS fix of the mission start and the grid's orientation on the ground. */
+export type GeoAnchor = { lat: number; lon: number; heading_deg: number; cell_m: number }
+
+/** Compact cell for the theatre view: [x, y, material label or null, metal 0|1, voc 0|1]. */
+export type WorldCell = [number, number, string | null, 0 | 1, 0 | 1]
+
+export type WorldMission = {
+  mission: MissionSummary
+  geo: GeoAnchor
+  current: Point | null
+  cells: WorldCell[]
+}
+
+export type WorldResponse = { missions: WorldMission[] }

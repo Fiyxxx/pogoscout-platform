@@ -13,7 +13,7 @@ from pogoscout_api.api.schemas import (
     MissionPatch,
     MissionSummary,
 )
-from pogoscout_api.application import events, images, missions, views
+from pogoscout_api.application import events, images, missions, readmodel, views
 from pogoscout_api.domain.hops import HopPayload
 
 router = APIRouter(prefix="/api/v1")
@@ -24,16 +24,22 @@ DomainError = (missions.NotFound, missions.Conflict, missions.Invalid)
 def create_mission(body: MissionCreate, session: SessionDep, ctx: Ctx):
     try:
         row = missions.create_mission(
-            session, body.name, body.source, body.mission_id, notifier=ctx.hub
+            session, body.name, body.source, body.mission_id, geo=body.geo, notifier=ctx.hub
         )
     except DomainError as exc:
         raise http_error(exc) from exc
     return views.mission_summary(session, row.id)
 
 
+@router.get("/world")
+def get_world(session: SessionDep):
+    """GPS-anchored missions with compact cells for the theatre map (see docs/API.md)."""
+    return readmodel.world(session)
+
+
 @router.get("/missions", response_model=list[MissionSummary])
 def list_missions(session: SessionDep):
-    return [views.mission_summary(session, m.id) for m in missions.list_missions(session)]
+    return readmodel.summaries(session, missions.list_missions(session))
 
 
 @router.get("/missions/{mission_id}", response_model=MissionSummary)
@@ -132,8 +138,9 @@ def get_image(mission_id: str, hop_id: HopId, session: SessionDep, ctx: Ctx):
 
 @router.get("/missions/{mission_id}/cells", response_model=CellsResponse)
 def get_cells(mission_id: str, session: SessionDep):
+    """Pre-serialised (and cached) by the read model; same document as CellsResponse."""
     try:
-        return views.mission_cells(session, mission_id)
+        return Response(readmodel.cells_json(session, mission_id), media_type="application/json")
     except DomainError as exc:
         raise http_error(exc) from exc
 

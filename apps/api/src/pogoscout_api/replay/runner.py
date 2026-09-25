@@ -6,7 +6,8 @@ on the mission, while play state (playing, speed) lives in memory with one async
 
 import asyncio
 import contextlib
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -15,9 +16,12 @@ from pogoscout_api.api.schemas import ReplayState, ScenarioInfo
 from pogoscout_api.application import images, missions
 from pogoscout_api.application.notify import Notifier
 from pogoscout_api.config import Settings
+from pogoscout_api.domain.geo import GeoAnchor
 from pogoscout_api.evidence.store import ImageStore
 from pogoscout_api.persistence.db import Database, MissionRow
+from pogoscout_api.replay.generate import render_mock_image
 from pogoscout_api.replay.scenario import HopEvent, ImageEvent, Scenario, load_scenario
+from pogoscout_api.replay.sites import SCENARIO_SITES
 
 
 @dataclass
@@ -25,6 +29,7 @@ class _Run:
     playing: bool = False
     speed: int = 1
     task: asyncio.Task | None = None
+    lock: threading.Lock = field(default_factory=threading.Lock)  # one applier at a time
 
 
 class ReplayManager:
@@ -71,7 +76,12 @@ class ReplayManager:
     # Missions ------------------------------------------------------------------------------
 
     def create(
-        self, session: Session, scenario_id: str, mission_id: str | None, name: str | None
+        self,
+        session: Session,
+        scenario_id: str,
+        mission_id: str | None,
+        name: str | None,
+        geo: GeoAnchor | None = None,
     ) -> MissionRow:
         scenario = self.scenario(scenario_id)
         return missions.create_mission(
@@ -80,6 +90,7 @@ class ReplayManager:
             "mock",
             mission_id,
             scenario_id=scenario_id,
+            geo=geo or SCENARIO_SITES.get(scenario_id),
             notifier=self.notifier,
         )
 
@@ -101,6 +112,9 @@ class ReplayManager:
             finished=mission.replay_cursor >= total,
         )
 
+    def _run(self, mission_id: str) -> _Run:
+        return self._runs.setdefault(mission_id, _Run())
+
     def state(self, mission_id: str) -> ReplayState:
         with self.db.session_scope() as session:
             return self._state(*self._mission(session, mission_id))
@@ -115,14 +129,25 @@ class ReplayManager:
                     session, mission_id, event.hop_id, event.payload, notifier=self.notifier
                 )
             elif isinstance(event, ImageEvent):
-                data = (self._directory(scenario.scenario_id) / event.file).read_bytes()
+                if event.file is None:  # generated: rendered in memory, never committed
+                    data = render_mock_image(
+                        scenario.scenario_id,
+                        event.hop_id,
+                        event.mock_label,
+                        scenario.seed,
+                        optimize=False,
+                    )
+                    content_type = "image/png"
+                else:
+                    data = (self._directory(scenario.scenario_id) / event.file).read_bytes()
+                    content_type = "image/png" if event.file.endswith(".png") else "image/jpeg"
                 images.store_image(
                     session,
                     self.store,
                     mission_id,
                     event.hop_id,
                     data,
-                    "image/png" if event.file.endswith(".png") else "image/jpeg",
+                    content_type,
                     max_bytes=self.config.max_image_bytes,
                     label_hint=event.mock_label,
                     confidence_hint=event.mock_confidence,
@@ -132,16 +157,27 @@ class ReplayManager:
             session.rollback()  # recorded by the service as evidence; the replay carries on
 
     def step(self, mission_id: str) -> ReplayState:
-        with self.db.session_scope() as session:
+        return self.advance(mission_id, 1)
+
+    def advance(self, mission_id: str, count: int) -> ReplayState:
+        """Apply up to `count` events now, in order, each through the application services."""
+        run = self._run(mission_id)
+        with run.lock, self.db.session_scope() as session:
             mission, scenario = self._mission(session, mission_id)
             total = len(scenario.events)
-            if mission.replay_cursor < total:
-                self._apply(session, scenario, mission_id, mission.replay_cursor)
+            end = min(total, mission.replay_cursor + max(0, count))
+            applied = mission.replay_cursor < end
+            while mission.replay_cursor < end:
+                # The cursor moves in the same transaction as the event it applies.
+                cursor = mission.replay_cursor
+                mission.replay_cursor = cursor + 1
+                self._apply(session, scenario, mission_id, cursor)
                 mission = missions.get_mission(session, mission_id)
-                mission.replay_cursor += 1
+                if mission.replay_cursor != cursor + 1:  # the event was rolled back
+                    mission.replay_cursor = cursor + 1
                 session.commit()
-                if mission.replay_cursor >= total and mission.status == "live":
-                    missions.set_status(session, mission_id, "complete", notifier=self.notifier)
+            if applied and mission.replay_cursor >= total and mission.status == "live":
+                missions.set_status(session, mission_id, "complete", notifier=self.notifier)
             self.notifier.publish(mission_id, ["replay", "mission"])
             return self._state(mission, scenario)
 
@@ -150,7 +186,7 @@ class ReplayManager:
     def play(self, mission_id: str, speed: int) -> ReplayState:
         """Start or re-speed timed play. Must be called from the event loop."""
         state = self.state(mission_id)
-        run = self._runs.setdefault(mission_id, _Run())
+        run = self._run(mission_id)
         run.speed = speed
         if not state.finished and not run.playing:
             run.playing = True

@@ -1,7 +1,7 @@
 import pytest
 from conftest import FIXTURE_DIR, drain
 
-from pogoscout_api.replay.generate import BUILDERS
+from pogoscout_api.replay.builders import BUILDERS, SMALL_BUILDERS
 from pogoscout_api.replay.scenario import load_expected, load_scenario
 
 
@@ -16,7 +16,7 @@ def replay_to_end(client, scenario_id: str, mission_id: str) -> dict:
     return client.get(f"/api/v1/missions/{mission_id}/cells").json()
 
 
-@pytest.mark.parametrize("name", list(BUILDERS))
+@pytest.mark.parametrize("name", list(SMALL_BUILDERS))
 def test_fixture_replays_to_expected_projection(client, name) -> None:
     """Golden test: replaying through the public services yields the expected projection."""
     expected = load_expected(FIXTURE_DIR / name)

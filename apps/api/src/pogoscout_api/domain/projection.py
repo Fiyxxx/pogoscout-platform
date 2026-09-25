@@ -49,28 +49,37 @@ class Projection:
 
 def aggregate_sensor(readings: list[SensorReading]) -> SensorCellState:
     """Any positive wins; then any valid negative; then error; else missing."""
-    if any(r.status == "ok" and r.value == 1 for r in readings):
+    return aggregate_sensor_values([(r.value, r.status) for r in readings])
+
+
+def aggregate_sensor_values(readings: list[tuple[int | None, str]]) -> SensorCellState:
+    """`aggregate_sensor` over plain (value, status) pairs."""
+    if any(status == "ok" and value == 1 for value, status in readings):
         return "detected"
-    if any(r.status == "ok" and r.value == 0 for r in readings):
+    if any(status == "ok" and value == 0 for value, status in readings):
         return "not_detected"
-    if any(r.status == "error" for r in readings):
+    if any(status == "error" for _, status in readings):
         return "sensor_error"
     return "missing"
 
 
-def project(hops: dict[int, HopPayload]) -> Projection:
-    placed: list[PlacedHop] = []
+def place(moves: dict[int, tuple[int, int]]) -> tuple[list[tuple[int, int, int]], list[int]]:
+    """(placed [(hop_id, x, y)], pending hop ids) from {hop_id: (dx, dy)}."""
+    placed: list[tuple[int, int, int]] = []
     x, y = 0, 0
     hop_id = 1
-    while hop_id in hops:
-        payload = hops[hop_id]
-        x, y = x + payload.movement.dx, y + payload.movement.dy
-        placed.append(PlacedHop(hop_id, x, y, payload))
+    while hop_id in moves:
+        dx, dy = moves[hop_id]
+        x, y = x + dx, y + dy
+        placed.append((hop_id, x, y))
         hop_id += 1
+    return placed, sorted(h for h in moves if h >= hop_id)
 
+
+def project(hops: dict[int, HopPayload]) -> Projection:
+    spots, pending = place({h: (p.movement.dx, p.movement.dy) for h, p in hops.items()})
+    placed = [PlacedHop(h, x, y, hops[h]) for h, x, y in spots]
     cells: dict[tuple[int, int], Cell] = {}
     for hop in placed:
         cells.setdefault((hop.x, hop.y), Cell(hop.x, hop.y)).hops.append(hop)
-
-    pending = sorted(h for h in hops if h >= hop_id)
     return Projection(placed=placed, pending_hop_ids=pending, cells=cells)

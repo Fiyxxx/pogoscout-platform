@@ -13,7 +13,7 @@ export function HopArcMark({ size = 26 }: { size?: number }) {
 
 export function Brand() {
   return (
-    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }} aria-label="PogoScout missions">
+    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }} aria-label="PogoScout theatre">
       <HopArcMark />
       <span className="brand" style={{ fontWeight: 800, fontSize: 17, letterSpacing: '0.02em' }}>
         POGOSCOUT

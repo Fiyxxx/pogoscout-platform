@@ -24,6 +24,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.types import TypeDecorator
 
+from pogoscout_api.domain.geo import GeoAnchor
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -61,6 +63,28 @@ class MissionRow(Base):
     status_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     scenario_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     replay_cursor: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # GPS anchor of cell (0, 0); null when the scout has no fix.
+    geo_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    geo_lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    geo_heading_deg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    geo_cell_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    @property
+    def geo(self) -> "GeoAnchor | None":
+        if self.geo_lat is None or self.geo_lon is None:
+            return None
+        return GeoAnchor(
+            lat=self.geo_lat,
+            lon=self.geo_lon,
+            heading_deg=self.geo_heading_deg or 0.0,
+            cell_m=self.geo_cell_m or 1.0,
+        )
+
+    def set_geo(self, geo: "GeoAnchor | None") -> None:
+        self.geo_lat = geo.lat if geo else None
+        self.geo_lon = geo.lon if geo else None
+        self.geo_heading_deg = geo.heading_deg if geo else None
+        self.geo_cell_m = geo.cell_m if geo else None
 
 
 class HopRow(Base):
@@ -73,6 +97,10 @@ class HopRow(Base):
     payload: Mapped[dict] = mapped_column(JSON)
     content_hash: Mapped[str] = mapped_column(String(64))
     received_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    # Movement copied out of the payload on insert so positions are integer sums in SQL.
+    # Nullable only for dev databases created before the columns existed (backfilled on start).
+    dx: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dy: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class HopRejectionRow(Base):
@@ -160,6 +188,7 @@ class EventRow(Base):
 def _enable_sqlite_pragmas(dbapi_connection, _record) -> None:
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")  # durable across app crashes in WAL mode
     cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
@@ -176,6 +205,19 @@ class Database:
     def create_all(self) -> None:
         Base.metadata.create_all(self.engine)
         self._add_missing_columns()
+        self._backfill()
+
+    def _backfill(self) -> None:
+        """Derived columns for rows stored before they existed. Copies, never rewrites facts."""
+        if self.engine.dialect.name != "sqlite":
+            return
+        with self.engine.begin() as conn:
+            conn.execute(
+                text(
+                    "UPDATE hops SET dx = json_extract(payload, '$.movement.dx'), "
+                    "dy = json_extract(payload, '$.movement.dy') WHERE dx IS NULL OR dy IS NULL"
+                )
+            )
 
     def _add_missing_columns(self) -> None:
         """Additive upgrade for dev databases created before a column existed (no migrations)."""

@@ -4,6 +4,8 @@
 code under test) and records the final cell state once every queued classification has run.
 """
 
+import functools
+import io
 import json
 import random
 from datetime import UTC, datetime, timedelta
@@ -38,7 +40,14 @@ OK0: Reading = (0, "ok")
 OK1: Reading = (1, "ok")
 
 
-def render_mock_image(path: Path, scenario_id: str, hop_id: int, label: str, seed: int) -> None:
+def render_mock_image(
+    scenario_id: str, hop_id: int, label: str, seed: int, *, optimize: bool = True
+) -> bytes:
+    """Synthetic mock screenshot as PNG bytes. Deterministic per (scenario, seed, hop, label).
+
+    Committed fixture images use `optimize=True`; generated images (rendered in memory at replay
+    time) use fast compression instead. Both are stamped SYNTHETIC MOCK EVIDENCE.
+    """
     rng = random.Random(seed * 1000 + hop_id)
     base = MOCK_IMAGE_COLOURS[label]
     img = Image.new("RGB", (320, 240), base)
@@ -47,13 +56,34 @@ def render_mock_image(path: Path, scenario_id: str, hop_id: int, label: str, see
         x, y, r = rng.randint(0, 320), rng.randint(0, 240), rng.randint(4, 22)
         shade = tuple(max(0, min(255, c + rng.randint(-28, 28))) for c in base)
         draw.ellipse((x - r, y - r, x + r, y + r), fill=shade)
-    draw.rectangle((0, 0, 320, 64), fill=(0, 0, 0))
-    font = ImageFont.load_default(size=14)
-    draw.text((8, 6), "SYNTHETIC MOCK EVIDENCE", fill=(255, 196, 0), font=font)
-    draw.text((8, 25), f"{scenario_id} / hop {hop_id:03d}", fill=(230, 230, 230), font=font)
-    draw.text((8, 44), f"mock class: {label}", fill=(230, 230, 230), font=font)
+    img.paste(_stamp_band(label), (0, 0))  # black band with the fixed stamp and class lines
+    draw.text((8, 25), f"{scenario_id} / hop {hop_id:03d}", fill=(230, 230, 230), font=_font())
+    buffer = io.BytesIO()
+    if optimize:
+        img.save(buffer, format="PNG", optimize=True)
+    else:
+        img.save(buffer, format="PNG", compress_level=1)
+    return buffer.getvalue()
+
+
+@functools.cache
+def _font() -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
+    return ImageFont.load_default(size=14)
+
+
+@functools.cache
+def _stamp_band(label: str) -> Image.Image:
+    """The top 65 rows: stamp and class lines never change for a label, so render them once."""
+    band = Image.new("RGB", (320, 65), (0, 0, 0))
+    draw = ImageDraw.Draw(band)
+    draw.text((8, 6), "SYNTHETIC MOCK EVIDENCE", fill=(255, 196, 0), font=_font())
+    draw.text((8, 44), f"mock class: {label}", fill=(230, 230, 230), font=_font())
+    return band
+
+
+def write_mock_image(path: Path, scenario_id: str, hop_id: int, label: str, seed: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(path, format="PNG", optimize=True)
+    path.write_bytes(render_mock_image(scenario_id, hop_id, label, seed))
 
 
 def _timestamp(ms: int) -> str:
@@ -120,9 +150,14 @@ class FixtureBuilder:
         self.send(hop_id, observed_ms if at_ms is None else at_ms, payload)
         return payload
 
-    def image(self, hop_id: int, at_ms: int, label: str, confidence: float) -> None:
-        image_file = f"images/hop_{hop_id:03d}.png"
-        render_mock_image(self.out_dir / image_file, self.scenario_id, hop_id, label, self.seed)
+    def image(
+        self, hop_id: int, at_ms: int, label: str, confidence: float, *, generate: bool = False
+    ) -> None:
+        """Committed PNG under images/, or (generate=True) rendered by the runner at replay."""
+        image_file = None
+        if not generate:
+            image_file = f"images/hop_{hop_id:03d}.png"
+            write_mock_image(self.out_dir / image_file, self.scenario_id, hop_id, label, self.seed)
         self.images.setdefault(hop_id, (label, confidence))
         seq = len(self.events) + 1
         self.events.append(
@@ -131,6 +166,7 @@ class FixtureBuilder:
                 at_ms=at_ms,
                 hop_id=hop_id,
                 file=image_file,
+                generate=generate,
                 mock_label=label,
                 mock_confidence=confidence,
             )
@@ -206,16 +242,91 @@ class FixtureBuilder:
             "flags": [f for f in FLAG_ORDER if active.get(f)],
         }
 
-    def write(self, description: str, mission_name: str) -> None:
-        scenario = Scenario(
+    def scenario(self, description: str, mission_name: str) -> Scenario:
+        return Scenario(
             scenario_id=self.scenario_id,
             description=description,
             seed=self.seed,
             mission=ScenarioMission(name=mission_name, source="mock"),
             events=self.events,
         )
-        _write_json(self.out_dir / "scenario.json", scenario.model_dump(mode="json"))
+
+    def write(self, description: str, mission_name: str) -> None:
+        """Small fixtures: pretty scenario.json plus the full expected projection."""
+        data = scenario_json(self.scenario(description, mission_name))
+        _write_json(self.out_dir / "scenario.json", data)
         _write_json(self.out_dir / "expected_projection.json", self.expected())
+
+    def write_large(self, description: str, mission_name: str) -> None:
+        """Large fixtures: one event per line, and a summary of the expected projection."""
+        data = scenario_json(self.scenario(description, mission_name))
+        events = data.pop("events")
+        head = json.dumps(data, indent=2)[:-2]  # reopen the object to append the events
+        lines = ",\n".join("    " + json.dumps(e, separators=(",", ":")) for e in events)
+        path = self.out_dir / "scenario.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f'{head},\n  "events": [\n{lines}\n  ]\n}}\n')
+        _write_json(self.out_dir / "expected_projection.json", summarize(self.expected()))
+
+
+def expected_after(scenario: Scenario, events: int | None = None) -> dict:
+    """Expected projection once the first `events` scenario events (default all) are applied.
+
+    Rebuilt with the builder's own intent rules from the scenario file, independent of the
+    projection code under test. Used to check large fixtures on a prefix.
+    """
+    b = FixtureBuilder(scenario.scenario_id, Path(), scenario.seed)
+    for event in scenario.events[:events]:
+        if isinstance(event, HopEvent):
+            b.send(event.hop_id, event.at_ms, event.payload.model_dump(mode="json"))
+        else:
+            b.images.setdefault(event.hop_id, (event.mock_label, event.mock_confidence))
+    return b.expected()
+
+
+def scenario_json(scenario: Scenario) -> dict:
+    """Serialise, omitting image `file`/`generate` when unused so older fixtures stay stable."""
+    data = scenario.model_dump(mode="json")
+    for event in data["events"]:
+        if event["type"] == "image":
+            if event["file"] is None:
+                del event["file"]
+            if not event["generate"]:
+                del event["generate"]
+    return data
+
+
+def summarize(expected: dict) -> dict:
+    """Compact golden summary of a full expected projection (for fixtures with 1000+ cells)."""
+    cells = expected["cells"]
+    materials: dict[str, int] = {}
+    flags: dict[str, int] = {}
+    qualities: dict[str, int] = {}
+    for cell in cells:
+        label = cell["material"]["label"]
+        if label is not None:
+            materials[label] = materials.get(label, 0) + 1
+        for flag in cell["flags"]:
+            flags[flag] = flags.get(flag, 0) + 1
+        qualities[cell["quality"]] = qualities.get(cell["quality"], 0) + 1
+    return {
+        "scenario_id": expected["scenario_id"],
+        "format": "summary",
+        "path_length": len(expected["path"]),
+        "current": expected["current"],
+        "pending_hop_ids": expected["pending_hop_ids"],
+        "cells": len(cells),
+        "revisited_cells": sum(len(c["hop_ids"]) > 1 for c in cells),
+        "flagged_cells": sum(bool(c["flags"]) for c in cells),
+        "materials": dict(sorted(materials.items())),
+        "flag_counts": {f: flags[f] for f in FLAG_ORDER if f in flags},
+        "quality_counts": dict(sorted(qualities.items())),
+        "metal_cells": [[c["x"], c["y"]] for c in cells if c["metal"] == "detected"],
+        "voc_cells": [[c["x"], c["y"]] for c in cells if c["voc"] == "detected"],
+        "sensor_error_cells": [
+            [c["x"], c["y"]] for c in cells if "sensor_error" in (c["metal"], c["voc"])
+        ],
+    }
 
 
 def _positions(commands: str) -> list[tuple[int, int]]:
@@ -392,7 +503,7 @@ def _write_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n")
 
 
-BUILDERS = {
+SMALL_BUILDERS = {
     "clean_baseline_v1": build_clean_baseline,
     "park_connector_v1": build_park_connector,
     "failures_v1": build_failures,

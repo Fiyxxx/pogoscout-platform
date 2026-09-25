@@ -36,6 +36,7 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["tests"]
 asyncio_mode = "auto"
+markers = ["slow: full replays of the large fixtures (run with --run-slow)"]
 
 [tool.ruff]
 line-length = 100

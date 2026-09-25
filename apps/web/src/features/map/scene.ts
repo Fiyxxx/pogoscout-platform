@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { Cell, CellsResponse } from '../../api/types'
 import { cellKey, isLowConfidence, latestObservation, type Layer } from '../../lib/cells'
-import { isMaterial, type Material } from '../../lib/materials'
+import { isMaterial, MATERIALS, type Material } from '../../lib/materials'
 import { materialTexture, rng } from './textures'
 
 export type ViewMode = '2d' | '3d'
@@ -11,6 +11,8 @@ export type SceneOptions = { layer: Layer; view: ViewMode; metric: HeightMetric;
 const SIGNAL = 0xff5a1f
 const REST_HEIGHT = 0.06
 const WATER_HEIGHT = 0.025
+const CAPTURE_LIMIT = 400
+const DETAIL_BUDGET = 400
 const ROUGHNESS: Partial<Record<Material, number>> = {
   soil: 0.95, mud: 0.3, sand: 1, gravel: 0.85, grass_vegetation: 0.9,
   leaf_litter: 0.9, concrete: 0.9, asphalt: 0.95, tiles_pavers: 0.8,
@@ -20,10 +22,46 @@ const VIEW_ANGLES: Record<ViewMode, { phi: number; theta: number }> = {
   '3d': { phi: 0.92, theta: -0.6 },
 }
 
+type Group = Material | 'pending'
+const GROUPS: Group[] = [...MATERIALS, 'pending']
+
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k
 /** Nearest equivalent of `target` to `current`, so the camera turns the short way round. */
 const nearAngle = (target: number, current: number) =>
   target + Math.round((current - target) / (Math.PI * 2)) * Math.PI * 2
+
+/** Samples the ground texture in world space, so ground flows across cells instead of tiling per cell. */
+function worldMapped<T extends THREE.Material>(material: T, scale: number): T {
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vGroundUv;')
+      .replace(
+        '#include <project_vertex>',
+        `#include <project_vertex>
+        vec4 groundWorld = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          groundWorld = instanceMatrix * groundWorld;
+        #endif
+        groundWorld = modelMatrix * groundWorld;
+        vGroundUv = vec2(groundWorld.x, -groundWorld.z) * ${scale.toFixed(3)};`,
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vGroundUv;')
+      .replace('#include <map_fragment>', '#ifdef USE_MAP\n diffuseColor *= texture2D(map, vGroundUv);\n#endif')
+  }
+  material.customProgramCacheKey = () => `ground-${scale}`
+  return material
+}
+
+function groupMaterial(group: Group): THREE.Material {
+  if (group === 'pending') return new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0x2a2a28 })
+  const map = materialTexture(group)
+  if (group === 'water') {
+    const ripple = materialTexture('ripple')
+    return new THREE.MeshPhongMaterial({ map, specular: 0x9fb8c6, shininess: 120, bumpMap: ripple, bumpScale: 0.6, transparent: true, opacity: 0.94 })
+  }
+  return worldMapped(new THREE.MeshStandardMaterial({ map, roughness: ROUGHNESS[group] ?? 0.9, metalness: group === 'mud' ? 0.12 : 0 }), 0.37)
+}
 
 type DetailSpec = { n: number; geo: () => THREE.BufferGeometry; colors: number[]; y: number; tilt: number; scale: [number, number] }
 const DETAILS: Partial<Record<Material, DetailSpec>> = {
@@ -41,30 +79,9 @@ const DETAILS: Partial<Record<Material, DetailSpec>> = {
   soil: { n: 22, geo: () => new THREE.DodecahedronGeometry(0.022, 0), colors: [0x7a3f25, 0x6e3620, 0x9c5a36], y: 0.008, tilt: 3, scale: [0.6, 1.4] },
 }
 
-function buildDetails(kind: Material, density: number, seed: number): THREE.InstancedMesh | null {
-  const spec = DETAILS[kind]
-  if (!spec || density <= 0) return null
-  const n = Math.round(spec.n * density)
-  const r = rng(seed)
-  const mesh = new THREE.InstancedMesh(spec.geo(), new THREE.MeshStandardMaterial({ roughness: 0.85, side: THREE.DoubleSide }), n)
-  const dummy = new THREE.Object3D()
-  const color = new THREE.Color()
-  for (let i = 0; i < n; i++) {
-    dummy.position.set((r() - 0.5) * 0.94, spec.y + i * 0.00002, (r() - 0.5) * 0.94)
-    dummy.rotation.set((r() - 0.5) * spec.tilt, r() * Math.PI * 2, (r() - 0.5) * spec.tilt)
-    dummy.scale.setScalar(spec.scale[0] + r() * (spec.scale[1] - spec.scale[0]))
-    dummy.updateMatrix()
-    mesh.setMatrixAt(i, dummy.matrix)
-    mesh.setColorAt(i, color.setHex(spec.colors[Math.floor(r() * spec.colors.length)]))
-  }
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  return mesh
-}
-
 function flatColor(cell: Cell, layer: Layer): number {
-  const sensor = layer === 'metal' ? cell.metal : cell.voc
   if (layer === 'metal' || layer === 'voc') {
+    const sensor = layer === 'metal' ? cell.metal : cell.voc
     if (sensor === 'detected') return layer === 'metal' ? SIGNAL : 0xd9d9d4
     if (sensor === 'sensor_error') return 0x5a2410
     if (sensor === 'missing') return 0x121211
@@ -80,55 +97,116 @@ function flatColor(cell: Cell, layer: Layer): number {
   }
 }
 
-type CellView = {
+function groupOf(cell: Cell): Group {
+  const c = cell.material
+  return c.status === 'succeeded' && isMaterial(c.label) ? c.label : 'pending'
+}
+
+function signatureOf(cell: Cell): string {
+  const c = cell.material
+  return [c.status, c.label, c.confidence, cell.metal, cell.voc, cell.quality, latestObservation(cell)?.image?.sha256 ?? ''].join('|')
+}
+
+type CellState = {
+  key: string
   cell: Cell
   signature: string
-  mesh: THREE.Mesh
-  texMat: THREE.Material
-  flatMat: THREE.MeshStandardMaterial
-  details: THREE.InstancedMesh | null
-  capture: THREE.Mesh
-  captureUrl: string | null
+  lastHop: number
   height: number
   target: number
   appear: number
-  beacon: { beam: THREE.Mesh; ring: THREE.Mesh } | null
-  cue: THREE.Mesh | null
+  group: Group
+  groupIndex: number
+  flatIndex: number
+}
+
+/** A resizable batch of box instances drawn in one call. */
+class Batch {
+  mesh: THREE.InstancedMesh
+  keys: string[] = []
+  private scene: THREE.Scene
+  private geometry: THREE.BufferGeometry
+  private material: THREE.Material
+
+  constructor(scene: THREE.Scene, geometry: THREE.BufferGeometry, material: THREE.Material, capacity = 64) {
+    this.scene = scene
+    this.geometry = geometry
+    this.material = material
+    this.mesh = this.create(capacity)
+  }
+
+  private create(capacity: number) {
+    const mesh = new THREE.InstancedMesh(this.geometry, this.material, capacity)
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    mesh.frustumCulled = false
+    mesh.count = 0
+    mesh.setColorAt(0, new THREE.Color(0xffffff))
+    this.scene.add(mesh)
+    return mesh
+  }
+
+  /** Assigns keys to instance slots, growing the buffer when needed. */
+  assign(keys: string[]) {
+    if (keys.length > this.mesh.instanceMatrix.count) {
+      const visible = this.mesh.visible
+      this.scene.remove(this.mesh)
+      this.mesh.dispose()
+      this.mesh = this.create(Math.max(64, 2 ** Math.ceil(Math.log2(keys.length))))
+      this.mesh.visible = visible
+    }
+    this.keys = keys
+    this.mesh.count = keys.length
+  }
 }
 
 /**
  * Imperative Three.js scene for one mission. React owns the options; this class owns geometry,
- * animation and disposal. Cells are updated in place as live data arrives, and new cells grow in.
+ * animation and disposal. Ground is batched per material so thousands of cells draw in a
+ * handful of calls, and cells are updated in place as live data arrives.
  */
 export class MissionScene {
+  private canvas: HTMLCanvasElement
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
-  private camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300)
+  private camera = new THREE.PerspectiveCamera(30, 1, 0.1, 2000)
   private clock = new THREE.Clock()
   private raycaster = new THREE.Raycaster()
-  private views = new Map<string, CellView>()
-  private frontier = new THREE.Group()
+  private fog = new THREE.Fog(0x0a0a0a, 18, 44)
+  private states = new Map<string, CellState>()
+  private boxGeo = new THREE.BoxGeometry(1, 1, 1)
+  private batches = new Map<Group, Batch>()
+  private flat: Batch
+  private details: THREE.InstancedMesh[] = []
+  private detailsDirty = false
+  private detailsBuiltAt = -1
+  private frontier: THREE.LineSegments
+  private captures = new Map<string, THREE.Mesh>()
+  private captureTextures = new Map<string, THREE.Texture>()
+  private loader = new THREE.TextureLoader()
+  private beacons = new Map<string, { beam: THREE.Mesh; ring: THREE.Mesh }>()
+  private cues = new Map<string, THREE.Mesh>()
+  private beamGeo = new THREE.CylinderGeometry(0.035, 0.035, 3, 10)
+  private ringGeo = new THREE.RingGeometry(0.3, 0.34, 48)
+  private cueGeo = new THREE.OctahedronGeometry(0.16)
   private selBox: THREE.LineSegments
   private marker: THREE.Mesh
   private north: THREE.Mesh
   private sun: THREE.DirectionalLight
-  private ripple = materialTexture('ripple').clone()
-  private loader = new THREE.TextureLoader()
-  private boxGeo = new THREE.BoxGeometry(1, 1, 1)
-  private beamGeo = new THREE.CylinderGeometry(0.035, 0.035, 3, 10)
-  private ringGeo = new THREE.RingGeometry(0.3, 0.34, 48)
-  private cueGeo = new THREE.OctahedronGeometry(0.16)
   private options: SceneOptions = { layer: 'combined', view: '3d', metric: 'none', selected: null }
   private current = { x: 0, y: 0 }
   private target = new THREE.Vector3()
   private targetGoal = new THREE.Vector3()
+  private autoFrame = true
+  private framed = false
   private cam = { phi: VIEW_ANGLES['3d'].phi, theta: VIEW_ANGLES['3d'].theta, r: 16 }
   private camGoal = { ...this.cam }
   private baseRadius = 16
   private zoom = 1
+  private matrix = new THREE.Matrix4()
   private raf = 0
   private disposed = false
-  private canvas: HTMLCanvasElement
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -140,22 +218,26 @@ export class MissionScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
     const scene = this.scene
-    scene.fog = new THREE.Fog(0x0a0a0a, 18, 44)
+    scene.fog = this.fog
     scene.add(new THREE.HemisphereLight(0xf4f2ea, 0x0a0a0a, 0.85))
     this.sun = new THREE.DirectionalLight(0xfff6e8, 1.7)
     this.sun.castShadow = true
     this.sun.shadow.mapSize.set(2048, 2048)
     this.sun.shadow.bias = -0.0004
-    Object.assign(this.sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 })
     scene.add(this.sun, this.sun.target)
 
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 1 }))
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 1 }))
     ground.rotation.x = -Math.PI / 2
     ground.receiveShadow = true
     scene.add(ground)
-    const grid = new THREE.GridHelper(120, 120, 0x242422, 0x191918)
+    const grid = new THREE.GridHelper(400, 400, 0x242422, 0x191918)
     grid.position.set(0.5, 0.002, 0.5)
     scene.add(grid)
+
+    for (const group of GROUPS) this.batches.set(group, new Batch(scene, this.boxGeo, groupMaterial(group)))
+    this.flat = new Batch(scene, this.boxGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }))
+
+    this.frontier = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x4a4a46, transparent: true, opacity: 0.55 }))
     scene.add(this.frontier)
 
     const origin = [[-0.2, -0.2], [0.2, -0.2], [0.2, 0.2], [-0.2, 0.2]].map(([x, z]) => new THREE.Vector3(x, 0.005, z))
@@ -177,9 +259,6 @@ export class MissionScene {
     this.marker.visible = false
     scene.add(this.marker)
 
-    this.ripple.repeat.set(2, 2)
-    this.ripple.needsUpdate = true
-
     const loop = () => {
       if (this.disposed) return
       this.frame()
@@ -198,27 +277,52 @@ export class MissionScene {
 
   setOptions(next: SceneOptions) {
     const viewChanged = next.view !== this.options.view
+    const colorsChanged = next.layer !== this.options.layer
     this.options = next
-    for (const view of this.views.values()) this.applyLayer(view)
+    for (const s of this.states.values()) s.target = this.targetHeight(s.cell)
+    if (colorsChanged) this.paintFlat()
+    this.applyVisibility()
     const angles = VIEW_ANGLES[next.view]
     this.camGoal.phi = angles.phi
     if (viewChanged) this.camGoal.theta = nearAngle(angles.theta, this.cam.theta)
   }
 
   update(data: CellsResponse) {
+    let regroup = false
     const seen = new Set<string>()
     for (const cell of data.cells) {
       const key = cellKey(cell)
       seen.add(key)
-      const existing = this.views.get(key)
-      if (!existing) this.views.set(key, this.createView(cell))
-      else if (existing.signature !== signatureOf(cell)) this.rebuildView(existing, cell)
-      else existing.cell = cell
+      const lastHop = cell.hop_ids[cell.hop_ids.length - 1] ?? 0
+      const existing = this.states.get(key)
+      if (!existing) {
+        this.states.set(key, { key, cell, signature: signatureOf(cell), lastHop, height: 0, target: this.targetHeight(cell), appear: 0, group: groupOf(cell), groupIndex: -1, flatIndex: -1 })
+        regroup = true
+      } else {
+        existing.cell = cell
+        existing.lastHop = lastHop
+        existing.target = this.targetHeight(cell)
+        const signature = signatureOf(cell)
+        if (signature !== existing.signature) {
+          existing.signature = signature
+          existing.group = groupOf(cell)
+          regroup = true
+        }
+      }
     }
-    for (const [key, view] of this.views) if (!seen.has(key)) this.removeView(key, view)
-    for (const view of this.views.values()) this.applyLayer(view)
+    for (const key of [...this.states.keys()]) {
+      if (!seen.has(key)) {
+        this.states.delete(key)
+        regroup = true
+      }
+    }
+    if (regroup) {
+      this.regroup()
+      this.rebuildFrontier()
+      this.syncMarkers()
+      this.detailsDirty = true
+    }
     this.current = data.current
-    this.rebuildFrontier()
     this.frameBounds(data)
   }
 
@@ -227,9 +331,11 @@ export class MissionScene {
     const rect = this.canvas.getBoundingClientRect()
     const v = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1)
     this.raycaster.setFromCamera(v, this.camera)
-    const meshes = [...this.views.values()].map((view) => view.mesh)
-    const hit = this.raycaster.intersectObjects(meshes, false)[0]
-    return hit ? (hit.object.userData.key as string) : null
+    const batches = this.texturedLayer() ? [...this.batches.values()] : [this.flat]
+    const hit = this.raycaster.intersectObjects(batches.map((b) => b.mesh), false)[0]
+    if (!hit || hit.instanceId === undefined) return null
+    const batch = batches.find((b) => b.mesh === hit.object)
+    return batch?.keys[hit.instanceId] ?? null
   }
 
   orbit(dx: number, dy: number) {
@@ -238,13 +344,33 @@ export class MissionScene {
     this.camGoal.phi = Math.min(1.35, Math.max(0.25, this.camGoal.phi - dy * 0.005))
   }
 
+  /** Slides the view across the ground, in screen directions. */
+  pan(dx: number, dy: number) {
+    const k = this.cam.r * 0.0016
+    const theta = this.cam.theta
+    const right = new THREE.Vector3(Math.cos(theta), 0, -Math.sin(theta))
+    const forward = new THREE.Vector3(-Math.sin(theta), 0, -Math.cos(theta))
+    this.targetGoal.addScaledVector(right, -dx * k).addScaledVector(forward, dy * k)
+    this.autoFrame = false
+  }
+
   zoomBy(deltaY: number) {
-    this.zoom = Math.min(2.4, Math.max(0.45, this.zoom * Math.exp(deltaY * 0.001)))
+    this.zoom = Math.min(3, Math.max(0.12, this.zoom * Math.exp(deltaY * 0.001)))
+  }
+
+  /** Flies the camera to a cell and moves in close. */
+  focus(key: string) {
+    const s = this.states.get(key)
+    if (!s) return
+    this.targetGoal.set(s.cell.x, 0, -s.cell.y)
+    this.zoom = Math.min(this.zoom, Math.max(0.12, 14 / this.baseRadius))
+    this.autoFrame = false
   }
 
   recenter() {
     const angles = VIEW_ANGLES[this.options.view]
     this.zoom = 1
+    this.autoFrame = true
     this.camGoal.phi = angles.phi
     this.camGoal.theta = nearAngle(angles.theta, this.cam.theta)
   }
@@ -252,6 +378,7 @@ export class MissionScene {
   dispose() {
     this.disposed = true
     cancelAnimationFrame(this.raf)
+    for (const t of this.captureTextures.values()) t.dispose()
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh
       mesh.geometry?.dispose()
@@ -262,200 +389,267 @@ export class MissionScene {
     this.renderer.dispose()
   }
 
-  private createView(cell: Cell): CellView {
-    const mesh = new THREE.Mesh(this.boxGeo)
-    mesh.castShadow = true
-    mesh.receiveShadow = true
-    mesh.userData.key = cellKey(cell)
-    mesh.position.set(cell.x, 0, -cell.y)
-    mesh.scale.y = 0.001
-    this.scene.add(mesh)
-    const capture = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.96), new THREE.MeshBasicMaterial())
-    capture.rotation.x = -Math.PI / 2
-    capture.visible = false
-    this.scene.add(capture)
-    const view: CellView = {
-      cell, signature: '', mesh, capture, captureUrl: null,
-      texMat: new THREE.MeshStandardMaterial(), flatMat: new THREE.MeshStandardMaterial({ roughness: 0.9 }),
-      details: null, height: 0, target: REST_HEIGHT, appear: 0, beacon: null, cue: null,
-    }
-    this.rebuildView(view, cell)
-    return view
+  private texturedLayer() {
+    const l = this.options.layer
+    return l === 'combined' || l === 'material' || l === 'captures'
   }
 
-  private rebuildView(view: CellView, cell: Cell) {
-    view.cell = cell
-    view.signature = signatureOf(cell)
-    view.texMat.dispose()
-    view.texMat = this.groundMaterial(cell)
-    if (view.details) {
-      this.scene.remove(view.details)
-      view.details.geometry.dispose()
-      ;(view.details.material as THREE.Material).dispose()
-    }
-    const label = cell.material.label
-    const density = cell.material.status !== 'succeeded' ? 0 : isLowConfidence(cell.material) ? 0.35 : 1
-    view.details = isMaterial(label) ? buildDetails(label, density, cell.x * 7919 + cell.y * 104729) : null
-    if (view.details) this.scene.add(view.details)
+  private targetHeight(cell: Cell): number {
+    const { view, metric } = this.options
+    const c = cell.material
+    const succeeded = c.status === 'succeeded' && c.confidence != null
+    if (view === '2d' || metric === 'none') return succeeded && c.label === 'water' ? WATER_HEIGHT : REST_HEIGHT
+    return 0.1 + (succeeded ? 1 - (c.confidence ?? 0) : 0.3) * 3.2
+  }
 
-    const wantsBeacon = cell.metal === 'detected'
-    if (wantsBeacon && !view.beacon) {
-      const beam = new THREE.Mesh(this.beamGeo, new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true }))
-      const ring = new THREE.Mesh(this.ringGeo, new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true, side: THREE.DoubleSide }))
-      ring.rotation.x = -Math.PI / 2
-      this.scene.add(beam, ring)
-      view.beacon = { beam, ring }
+  private regroup() {
+    const members = new Map<Group, string[]>(GROUPS.map((g) => [g, []]))
+    const all: string[] = []
+    for (const s of this.states.values()) {
+      const list = members.get(s.group)!
+      s.groupIndex = list.length
+      list.push(s.key)
+      s.flatIndex = all.length
+      all.push(s.key)
     }
-    const wantsCue = cell.voc === 'detected'
-    if (wantsCue && !view.cue) {
-      view.cue = new THREE.Mesh(this.cueGeo, new THREE.MeshBasicMaterial({ color: 0xf2f2f0 }))
-      this.scene.add(view.cue)
+    const color = new THREE.Color()
+    for (const [group, keys] of members) {
+      const batch = this.batches.get(group)!
+      batch.assign(keys)
+      keys.forEach((key, i) => {
+        const low = isLowConfidence(this.states.get(key)!.cell.material)
+        batch.mesh.setColorAt(i, color.setHex(low ? 0x8f8f8a : 0xffffff))
+      })
+      if (batch.mesh.instanceColor) batch.mesh.instanceColor.needsUpdate = true
     }
+    this.flat.assign(all)
+    this.paintFlat()
+    this.applyVisibility()
+  }
 
-    const url = [...cell.observations].reverse().find((o) => o.image)?.image?.url ?? null
-    if (url && url !== view.captureUrl) {
-      view.captureUrl = url
+  private paintFlat() {
+    const color = new THREE.Color()
+    this.flat.keys.forEach((key, i) => this.flat.mesh.setColorAt(i, color.setHex(flatColor(this.states.get(key)!.cell, this.options.layer))))
+    if (this.flat.mesh.instanceColor) this.flat.mesh.instanceColor.needsUpdate = true
+  }
+
+  private applyVisibility() {
+    const textured = this.texturedLayer()
+    for (const b of this.batches.values()) b.mesh.visible = textured
+    this.flat.mesh.visible = !textured
+    const detailsOn = textured && this.options.layer !== 'captures' && (this.options.view === '2d' || this.options.metric === 'none')
+    for (const d of this.details) d.visible = detailsOn
+    if (this.options.layer === 'captures') this.syncCaptures()
+    for (const m of this.captures.values()) m.visible = this.options.layer === 'captures'
+  }
+
+  private syncMarkers() {
+    for (const s of this.states.values()) {
+      if (s.cell.metal === 'detected' && !this.beacons.has(s.key)) {
+        const beam = new THREE.Mesh(this.beamGeo, new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true }))
+        const ring = new THREE.Mesh(this.ringGeo, new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true, side: THREE.DoubleSide }))
+        ring.rotation.x = -Math.PI / 2
+        this.scene.add(beam, ring)
+        this.beacons.set(s.key, { beam, ring })
+      }
+      if (s.cell.voc === 'detected' && !this.cues.has(s.key)) {
+        const cue = new THREE.Mesh(this.cueGeo, new THREE.MeshBasicMaterial({ color: 0xf2f2f0 }))
+        this.scene.add(cue)
+        this.cues.set(s.key, cue)
+      }
+    }
+    for (const [key, b] of this.beacons) {
+      if (this.states.get(key)?.cell.metal !== 'detected') {
+        this.scene.remove(b.beam, b.ring)
+        this.beacons.delete(key)
+      }
+    }
+    for (const [key, cue] of this.cues) {
+      if (this.states.get(key)?.cell.voc !== 'detected') {
+        this.scene.remove(cue)
+        this.cues.delete(key)
+      }
+    }
+  }
+
+  /** Capture tiles for the most recently visited cells; beyond the budget cells keep their material. */
+  private syncCaptures() {
+    const recent = [...this.states.values()]
+      .filter((s) => latestObservation(s.cell)?.image)
+      .sort((a, b) => b.lastHop - a.lastHop)
+      .slice(0, CAPTURE_LIMIT)
+    const wanted = new Set(recent.map((s) => s.key))
+    for (const [key, mesh] of this.captures) {
+      if (!wanted.has(key)) {
+        this.scene.remove(mesh)
+        ;(mesh.material as THREE.Material).dispose()
+        mesh.geometry.dispose()
+        this.captureTextures.get(key)?.dispose()
+        this.captureTextures.delete(key)
+        this.captures.delete(key)
+      }
+    }
+    for (const s of recent) {
+      if (this.captures.has(s.key)) continue
+      const url = latestObservation(s.cell)!.image!.url
+      const material = new THREE.MeshBasicMaterial({ color: 0x1a1a19 })
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.96), material)
+      mesh.rotation.x = -Math.PI / 2
+      this.scene.add(mesh)
+      this.captures.set(s.key, mesh)
       this.loader.load(url, (texture) => {
+        if (!this.captures.has(s.key)) return texture.dispose()
         texture.colorSpace = THREE.SRGBColorSpace
         // Square crop from the lower part of the frame, where the landing area is.
         texture.repeat.set(0.54, 0.72)
         texture.offset.set(0.23, 0)
-        const material = view.capture.material as THREE.MeshBasicMaterial
-        material.map?.dispose()
         material.map = texture
+        material.color.setHex(0xffffff)
         material.needsUpdate = true
+        this.captureTextures.set(s.key, texture)
       })
     }
   }
 
-  private groundMaterial(cell: Cell): THREE.Material {
-    const c = cell.material
-    const label = c.label
-    if (c.status !== 'succeeded' || !isMaterial(label)) {
-      return new THREE.MeshStandardMaterial({ color: 0x161615, roughness: 1, emissive: 0x2a2a28 })
+  private rebuildDetails() {
+    for (const d of this.details) {
+      this.scene.remove(d)
+      d.geometry.dispose()
+      ;(d.material as THREE.Material).dispose()
     }
-    const r = rng(cell.x * 31 + cell.y * 977)
-    const map = materialTexture(label).clone()
-    map.needsUpdate = true
-    let material: THREE.MeshStandardMaterial | THREE.MeshPhongMaterial
-    if (label === 'water') {
-      material = new THREE.MeshPhongMaterial({ map, specular: 0x9fb8c6, shininess: 120, bumpMap: this.ripple, bumpScale: 0.6, transparent: true, opacity: 0.94 })
-    } else {
-      map.offset.set(r(), r())
-      map.center.set(0.5, 0.5)
-      map.rotation = Math.floor(r() * 4) * (Math.PI / 2)
-      material = new THREE.MeshStandardMaterial({ map, roughness: ROUGHNESS[label] ?? 0.9, metalness: label === 'mud' ? 0.12 : 0 })
+    this.details = []
+    const factor = Math.min(1, Math.max(0.1, DETAIL_BUDGET / Math.max(1, this.states.size)))
+    const dummy = new THREE.Object3D()
+    const color = new THREE.Color()
+    for (const [label, spec] of Object.entries(DETAILS) as [Material, DetailSpec][]) {
+      const cells = [...this.states.values()].filter((s) => s.group === label)
+      if (!cells.length) continue
+      const perCell = cells.map((s) => Math.round(spec.n * factor * (isLowConfidence(s.cell.material) ? 0.35 : 1)))
+      const total = perCell.reduce((a, b) => a + b, 0)
+      if (!total) continue
+      const mesh = new THREE.InstancedMesh(spec.geo(), new THREE.MeshStandardMaterial({ roughness: 0.85, side: THREE.DoubleSide }), total)
+      let i = 0
+      cells.forEach((s, ci) => {
+        const r = rng(s.cell.x * 7919 + s.cell.y * 104729)
+        for (let k = 0; k < perCell[ci]; k++, i++) {
+          dummy.position.set(s.cell.x + (r() - 0.5) * 0.94, REST_HEIGHT + spec.y, -s.cell.y + (r() - 0.5) * 0.94)
+          dummy.rotation.set((r() - 0.5) * spec.tilt, r() * Math.PI * 2, (r() - 0.5) * spec.tilt)
+          dummy.scale.setScalar(spec.scale[0] + r() * (spec.scale[1] - spec.scale[0]))
+          dummy.updateMatrix()
+          mesh.setMatrixAt(i, dummy.matrix)
+          mesh.setColorAt(i, color.setHex(spec.colors[Math.floor(r() * spec.colors.length)]))
+        }
+      })
+      mesh.castShadow = cells.length < 800
+      mesh.receiveShadow = true
+      this.scene.add(mesh)
+      this.details.push(mesh)
     }
-    if (isLowConfidence(c)) material.color.setHex(0x8f8f8a)
-    return material
-  }
-
-  private applyLayer(view: CellView) {
-    const { layer, view: mode, metric } = this.options
-    const textured = layer === 'combined' || layer === 'material' || layer === 'captures'
-    view.mesh.material = textured ? view.texMat : view.flatMat
-    if (!textured) view.flatMat.color.setHex(flatColor(view.cell, layer))
-    const c = view.cell.material
-    const uncertainty = c.status === 'succeeded' && c.confidence != null ? 1 - c.confidence : 0.3
-    const rest = c.label === 'water' && c.status === 'succeeded' ? WATER_HEIGHT : REST_HEIGHT
-    view.target = mode === '2d' || metric === 'none' ? rest : 0.1 + uncertainty * 3.2
-  }
-
-  private removeView(key: string, view: CellView) {
-    for (const object of [view.mesh, view.capture, view.details, view.beacon?.beam, view.beacon?.ring, view.cue]) {
-      if (object) this.scene.remove(object)
-    }
-    this.views.delete(key)
+    this.applyVisibility()
   }
 
   private rebuildFrontier() {
-    for (const child of [...this.frontier.children]) {
-      this.frontier.remove(child)
-      ;(child as THREE.LineLoop).geometry.dispose()
-    }
-    const material = new THREE.LineBasicMaterial({ color: 0x4a4a46, transparent: true, opacity: 0.55 })
+    const points: number[] = []
     const done = new Set<string>()
-    for (const view of this.views.values()) {
+    for (const s of this.states.values()) {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const x = view.cell.x + dx
-        const y = view.cell.y + dy
+        const x = s.cell.x + dx
+        const y = s.cell.y + dy
         const key = `${x},${y}`
-        if (this.views.has(key) || done.has(key) || (x === 0 && y === 0)) continue
+        if (this.states.has(key) || done.has(key) || (x === 0 && y === 0)) continue
         done.add(key)
-        const pts = [[-0.46, -0.46], [0.46, -0.46], [0.46, 0.46], [-0.46, 0.46]].map(([px, pz]) => new THREE.Vector3(x + px, 0.004, -y + pz))
-        this.frontier.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), material))
+        const c = [[-0.46, -0.46], [0.46, -0.46], [0.46, 0.46], [-0.46, 0.46]].map(([px, pz]) => [x + px, 0.004, -y + pz])
+        for (let i = 0; i < 4; i++) points.push(...c[i], ...c[(i + 1) % 4])
       }
     }
+    this.frontier.geometry.dispose()
+    this.frontier.geometry = new THREE.BufferGeometry()
+    this.frontier.geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3))
   }
 
   private frameBounds(data: CellsResponse) {
     const { min_x, max_x, min_y, max_y } = data.bounds
     const cx = (min_x + max_x) / 2
     const cy = (min_y + max_y) / 2
-    this.targetGoal.set(cx, 0, -cy)
     const span = Math.max(max_x - min_x + 1, max_y - min_y + 1, 4)
     this.baseRadius = 5 + span * 1.45
+    if (this.autoFrame) {
+      this.targetGoal.set(cx, 0, -cy)
+      if (!this.framed) this.target.copy(this.targetGoal)
+      this.framed = true
+    }
     this.north.position.set(cx, 0.005, -(max_y + 1.6))
-    this.sun.position.set(cx + 5, 11, -cy + 6)
+    const half = span / 2 + 4
+    Object.assign(this.sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 1, far: span * 3 + 40 })
+    this.sun.shadow.camera.updateProjectionMatrix()
+    this.sun.position.set(cx + span * 0.35 + 5, span * 0.8 + 11, -cy + span * 0.4 + 6)
     this.sun.target.position.set(cx, 0, -cy)
   }
 
   private frame() {
     const t = this.clock.getElapsedTime()
     const { layer, selected } = this.options
-    const textured = layer === 'combined' || layer === 'material' || layer === 'captures'
     const showMetal = layer === 'combined' || layer === 'metal' || layer === 'captures'
     const showVoc = layer === 'combined' || layer === 'voc' || layer === 'captures'
 
-    for (const view of this.views.values()) {
-      view.height = lerp(view.height, view.target, 0.08)
-      view.appear = lerp(view.appear, 1, 0.12)
-      const h = Math.max(0.001, view.height * view.appear)
-      const { x, y } = view.cell
-      view.mesh.scale.y = h
-      view.mesh.position.y = h / 2
-      if (view.cell.material.status === 'queued' || view.cell.material.status === 'retrying') {
-        ;(view.texMat as THREE.MeshStandardMaterial).emissiveIntensity = 0.5 + 0.5 * Math.sin(t * 3)
-      }
-      if (view.details) {
-        view.details.position.set(x, h, -y)
-        view.details.visible = textured && layer !== 'captures' && view.appear > 0.6
-      }
-      const hasCapture = !!(view.capture.material as THREE.MeshBasicMaterial).map
-      view.capture.visible = layer === 'captures' && hasCapture
-      view.capture.position.set(x, h + 0.003, -y)
-      if (view.beacon) {
-        const p = (t * 0.7 + x * 0.37 + y * 0.11) % 1
-        view.beacon.beam.visible = view.beacon.ring.visible = showMetal
-        view.beacon.beam.position.set(x, h + 1.5 * view.appear, -y)
-        view.beacon.beam.scale.y = view.appear
-        ;(view.beacon.beam.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(t * 2 + x)
-        view.beacon.ring.position.set(x, h + 0.02, -y)
-        view.beacon.ring.scale.setScalar(1 + p * 1.6)
-        ;(view.beacon.ring.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.9
-      }
-      if (view.cue) {
-        view.cue.visible = showVoc
-        view.cue.position.set(x, h + 0.75 + Math.sin(t * 2) * 0.08, -y)
-        view.cue.rotation.y = t * 1.2
-        view.cue.scale.setScalar(view.appear)
-      }
+    if (this.detailsDirty && t - this.detailsBuiltAt > 0.6) {
+      this.detailsDirty = false
+      this.detailsBuiltAt = t
+      this.rebuildDetails()
     }
 
-    const current = this.views.get(cellKey(this.current))
+    for (const s of this.states.values()) {
+      s.height = lerp(s.height, s.target, 0.08)
+      s.appear = lerp(s.appear, 1, 0.12)
+      const h = Math.max(0.001, s.height * s.appear)
+      this.matrix.makeScale(1, h, 1).setPosition(s.cell.x, h / 2, -s.cell.y)
+      const batch = this.batches.get(s.group)!
+      if (s.groupIndex >= 0 && s.groupIndex < batch.mesh.count) batch.mesh.setMatrixAt(s.groupIndex, this.matrix)
+      if (s.flatIndex >= 0 && s.flatIndex < this.flat.mesh.count) this.flat.mesh.setMatrixAt(s.flatIndex, this.matrix)
+      const capture = this.captures.get(s.key)
+      if (capture) capture.position.set(s.cell.x, h + 0.003, -s.cell.y)
+    }
+    for (const b of this.batches.values()) b.mesh.instanceMatrix.needsUpdate = true
+    this.flat.mesh.instanceMatrix.needsUpdate = true
+    const pending = this.batches.get('pending')!.mesh.material as THREE.MeshStandardMaterial
+    pending.emissiveIntensity = 0.5 + 0.5 * Math.sin(t * 3)
+
+    for (const [key, b] of this.beacons) {
+      const s = this.states.get(key)
+      if (!s) continue
+      const h = s.height * s.appear
+      const p = (t * 0.7 + s.cell.x * 0.37 + s.cell.y * 0.11) % 1
+      b.beam.visible = b.ring.visible = showMetal
+      b.beam.position.set(s.cell.x, h + 1.5 * s.appear, -s.cell.y)
+      b.beam.scale.y = s.appear
+      ;(b.beam.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(t * 2 + s.cell.x)
+      b.ring.position.set(s.cell.x, h + 0.02, -s.cell.y)
+      b.ring.scale.setScalar(1 + p * 1.6)
+      ;(b.ring.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.9
+    }
+    for (const [key, cue] of this.cues) {
+      const s = this.states.get(key)
+      if (!s) continue
+      cue.visible = showVoc
+      cue.position.set(s.cell.x, s.height * s.appear + 0.75 + Math.sin(t * 2) * 0.08, -s.cell.y)
+      cue.rotation.y = t * 1.2
+      cue.scale.setScalar(s.appear)
+    }
+
+    const current = this.states.get(cellKey(this.current))
     this.marker.visible = !!current
     if (current) {
       this.marker.position.set(current.cell.x, current.height * current.appear + 0.03, -current.cell.y)
       ;(this.marker.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(t * 2.4)
     }
-    const sel = selected ? this.views.get(selected) : undefined
+    const sel = selected ? this.states.get(selected) : undefined
     this.selBox.visible = !!sel
     if (sel) {
       const h = Math.max(REST_HEIGHT, sel.height * sel.appear) + 0.04
       this.selBox.scale.y = h
       this.selBox.position.set(sel.cell.x, h / 2, -sel.cell.y)
     }
-    this.ripple.offset.set(t * 0.03, t * 0.021)
+    materialTexture('ripple').offset.set(t * 0.03, t * 0.021)
 
     const c = this.cam
     const g = this.camGoal
@@ -463,16 +657,12 @@ export class MissionScene {
     c.phi = lerp(c.phi, g.phi, 0.06)
     c.theta = lerp(c.theta, g.theta, 0.06)
     c.r = lerp(c.r, g.r, 0.08)
-    this.target.lerp(this.targetGoal, 0.06)
+    this.target.lerp(this.targetGoal, 0.08)
+    this.fog.near = c.r * 0.9
+    this.fog.far = c.r * 2.6
     const tg = this.target
     this.camera.position.set(tg.x + c.r * Math.sin(c.phi) * Math.sin(c.theta), c.r * Math.cos(c.phi), tg.z + c.r * Math.sin(c.phi) * Math.cos(c.theta))
     this.camera.lookAt(tg)
     this.renderer.render(this.scene, this.camera)
   }
-}
-
-function signatureOf(cell: Cell): string {
-  const c = cell.material
-  const obs = latestObservation(cell)
-  return [c.status, c.label, c.confidence, cell.metal, cell.voc, obs?.image?.sha256 ?? ''].join('|')
 }

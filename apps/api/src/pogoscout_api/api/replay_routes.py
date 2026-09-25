@@ -3,6 +3,7 @@ from fastapi import APIRouter, status
 from pogoscout_api.api.deps import Ctx, SessionDep, http_error
 from pogoscout_api.api.schemas import (
     MissionSummary,
+    ReplayAdvance,
     ReplayCreate,
     ReplayPlay,
     ReplayState,
@@ -22,7 +23,7 @@ def list_scenarios(ctx: Ctx):
 @router.post("/replays", status_code=status.HTTP_201_CREATED, response_model=MissionSummary)
 def create_replay(body: ReplayCreate, session: SessionDep, ctx: Ctx):
     try:
-        row = ctx.replay.create(session, body.scenario_id, body.mission_id, body.name)
+        row = ctx.replay.create(session, body.scenario_id, body.mission_id, body.name, body.geo)
     except DomainError as exc:
         raise http_error(exc) from exc
     return views.mission_summary(session, row.id)
@@ -40,6 +41,15 @@ async def get_replay(mission_id: str, ctx: Ctx):
 async def step_replay(mission_id: str, ctx: Ctx):
     try:
         return ctx.replay.step(mission_id)
+    except DomainError as exc:
+        raise http_error(exc) from exc
+
+
+@router.post("/missions/{mission_id}/replay/advance", response_model=ReplayState)
+def advance_replay(mission_id: str, body: ReplayAdvance, ctx: Ctx):
+    """Apply up to N events immediately (seeding). Runs in the threadpool, off the event loop."""
+    try:
+        return ctx.replay.advance(mission_id, body.events)
     except DomainError as exc:
         raise http_error(exc) from exc
 

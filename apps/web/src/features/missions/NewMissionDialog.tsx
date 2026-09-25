@@ -11,13 +11,19 @@ export function NewMissionDialog({ onClose }: { onClose: () => void }) {
   const scenarios = useQuery({ queryKey: keys.scenarios, queryFn: api.scenarios })
   const [name, setName] = useState('')
   const [source, setSource] = useState<string>('live')
+  const [speed, setSpeed] = useState(1)
 
   useEffect(() => {
     dialog.current?.showModal()
   }, [])
 
   const create = useMutation({
-    mutationFn: () => (source === 'live' ? api.createMission(name.trim()) : api.createReplay(source, name.trim())),
+    mutationFn: async () => {
+      if (source === 'live') return api.createMission(name.trim())
+      const mission = await api.createReplay(source, name.trim())
+      await api.replayPlay(mission.id, speed)
+      return mission
+    },
     onSuccess: (mission) => {
       queryClient.invalidateQueries({ queryKey: keys.missions })
       navigate(`/missions/${mission.id}`)
@@ -57,9 +63,23 @@ export function NewMissionDialog({ onClose }: { onClose: () => void }) {
           </legend>
           <Option value="live" checked={source === 'live'} onChange={setSource} title="Scout feed" detail="Waits for hops from the scout." />
           {scenarios.data?.map((s) => (
-            <Option key={s.scenario_id} value={s.scenario_id} checked={source === s.scenario_id} onChange={setSource} title={`Replay ${s.scenario_id}`} detail={`${s.hops} hops. ${s.description}`} />
+            <Option key={s.scenario_id} value={s.scenario_id} checked={source === s.scenario_id} onChange={setSource} title={`Simulated scout: ${s.scenario_id}`} detail={`${s.hops.toLocaleString('en-US')} hops. ${s.description}`} />
           ))}
         </fieldset>
+        {source !== 'live' && (
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span className="key">Feed speed</span>
+            <select
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              style={{ height: 36, padding: '0 8px', background: 'var(--bg)', border: '1px solid var(--line-strong)', color: 'var(--text)', font: 'inherit' }}
+            >
+              <option value={1}>Real time (1 hop per 4 s)</option>
+              <option value={4}>4× real time</option>
+              <option value={8}>8× real time</option>
+            </select>
+          </label>
+        )}
         {create.isError && <span className="signal" style={{ fontSize: 13 }}>{(create.error as Error).message}</span>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="btn" onClick={() => dialog.current?.close()}>

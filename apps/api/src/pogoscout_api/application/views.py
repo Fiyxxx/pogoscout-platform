@@ -229,13 +229,18 @@ def build_summary(data: MissionData, views: list[CellView] | None = None) -> Mis
         started_at=_observed_at(hop_one) if hop_one else None,
         last_hop_at=placed[-1].payload.observed_at if placed else None,
         scenario_id=mission.scenario_id,
+        geo=mission.geo,
         stats=stats,
     )
 
 
 def mission_summary(session: Session, mission_id: str) -> MissionSummary:
-    return build_summary(load_mission_data(session, mission_id))
+    """Cached fast path (see `readmodel`); `build_summary` remains the reference for exports."""
+    from pogoscout_api.application import readmodel  # readmodel imports this module's peers
+
+    return readmodel.summary(session, mission_id)
 
 
 def mission_cells(session: Session, mission_id: str) -> CellsResponse:
+    """Reference Pydantic build of the cells document (exports and equivalence tests)."""
     return build_cells(load_mission_data(session, mission_id))

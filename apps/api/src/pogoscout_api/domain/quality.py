@@ -73,12 +73,18 @@ class VisitFact:
     conflicting: bool = False
 
 
-def cell_material(visits: list[VisitFact]) -> ClassificationFact:
-    """Latest classification of the latest visit (hop order) that has a screenshot."""
+def material_visit(visits: list[VisitFact]) -> VisitFact | None:
+    """The latest visit (hop order) that has a screenshot: it decides the cell material."""
     for visit in sorted(visits, key=lambda v: v.hop_id, reverse=True):
         if visit.has_image:
-            return visit.classification
-    return NO_CLASSIFICATION
+            return visit
+    return None
+
+
+def cell_material(visits: list[VisitFact]) -> ClassificationFact:
+    """Latest classification of the latest visit (hop order) that has a screenshot."""
+    visit = material_visit(visits)
+    return visit.classification if visit is not None else NO_CLASSIFICATION
 
 
 def latest_succeeded_label(visits: list[VisitFact]) -> str | None:

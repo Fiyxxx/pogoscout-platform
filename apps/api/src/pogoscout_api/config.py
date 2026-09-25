@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     taxonomy_version: str = "pogo-materials-v2"
     classifier_timeout_s: float = 10.0
     mock_model_version: str = "mock-material 0.1.0"
-    mock_latency_s: float = 0.6
+    mock_latency_s: float = 0.1
 
     # Evidence
     max_image_bytes: int = 10 * 1024 * 1024
@@ -26,12 +26,13 @@ class Settings(BaseSettings):
     # Inference worker (persisted outbox in SQLite)
     worker_enabled: bool = True
     worker_poll_s: float = 0.3
-    worker_concurrency: int = 4
+    worker_concurrency: int = 8
     max_attempts: int = 3
     retry_base_s: float = 1.0
 
     # Live
     live_ping_s: float = 15.0
+    live_coalesce_s: float = 0.25  # at most one `changed` message per mission per window
 
 
 settings = Settings()

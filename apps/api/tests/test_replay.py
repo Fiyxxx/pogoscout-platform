@@ -99,3 +99,52 @@ def test_abort_pauses_play(make_client, tmp_path) -> None:
     client.post("/api/v1/missions/p/replay/play", json={"speed": 1})
     client.patch("/api/v1/missions/p", json={"status": "aborted", "status_note": "Link lost"})
     wait_for(lambda: not client.get("/api/v1/missions/p/replay").json()["playing"])
+
+
+def test_advance_applies_events_and_completes(client) -> None:
+    client.post("/api/v1/replays", json={"scenario_id": "failures_v1", "mission_id": "a"})
+    state = client.post("/api/v1/missions/a/replay/advance", json={"events": 5}).json()
+    assert state["cursor"] == 5 and not state["finished"]
+    assert client.get("/api/v1/missions/a").json()["status"] == "live"
+    state = client.post("/api/v1/missions/a/replay/advance", json={"events": 500}).json()
+    assert state["cursor"] == state["total"] == 19 and state["finished"]
+    assert client.get("/api/v1/missions/a").json()["status"] == "complete"
+    # Applying nothing more is a no-op and does not re-complete a mission set live again.
+    client.patch("/api/v1/missions/a", json={"status": "live"})
+    assert (
+        client.post("/api/v1/missions/a/replay/advance", json={"events": 3}).json()["cursor"] == 19
+    )
+    assert client.get("/api/v1/missions/a").json()["status"] == "live"
+
+
+def test_advance_matches_stepping(client) -> None:
+    for mission_id in ("s", "a"):
+        body = {"scenario_id": "failures_v1", "mission_id": mission_id}
+        client.post("/api/v1/replays", json=body)
+    for _ in range(19):
+        client.post("/api/v1/missions/s/replay/step")
+    client.post("/api/v1/missions/a/replay/advance", json={"events": 19})
+    stepped = client.get("/api/v1/missions/s/cells").json()
+    advanced = client.get("/api/v1/missions/a/cells").json()
+    for doc in (stepped, advanced):
+        doc.pop("mission_id")
+        for cell in doc["cells"]:
+            for obs in cell["observations"]:
+                obs.pop("image", None)
+                obs.pop("classification", None)
+                obs.pop("classification_history", None)
+            cell.pop("material")
+    assert stepped == advanced
+    kinds = lambda m: sorted(  # noqa: E731
+        e["kind"] for e in client.get(f"/api/v1/missions/{m}/events?limit=500").json()
+    )
+    assert kinds("s") == kinds("a")
+
+
+def test_advance_validation(client, mission) -> None:
+    client.post("/api/v1/replays", json={"scenario_id": "failures_v1", "mission_id": "v"})
+    assert client.post("/api/v1/missions/v/replay/advance", json={"events": 0}).status_code == 422
+    assert client.post("/api/v1/missions/v/replay/advance", json={}).status_code == 422
+    body = {"events": 1}
+    assert client.post("/api/v1/missions/nope/replay/advance", json=body).status_code == 404
+    assert client.post(f"/api/v1/missions/{mission}/replay/advance", json=body).status_code == 404

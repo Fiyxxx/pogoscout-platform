@@ -24,8 +24,12 @@ cd apps/api && uv sync && uv run pogoscout-api      # http://localhost:8000/docs
 # terminal 2
 cd apps/web && npm install && npm run dev           # http://localhost:5173
 
-# terminal 3: seed the demo missions (Grid Sweep 01, Park Connector Sweep, Drainage Culvert)
+# terminal 3: seed the demo missions (Sector 7 Sweep live, Canal Corridor Survey,
+# Drainage Culvert, Park Connector Sweep). Idempotent; resumes live play after an API restart.
 cd apps/api && uv run pogoscout-dev seed
+
+# start over: stop the API, delete the dev DB + images, restart the API, seed again
+cd apps/api && uv run pogoscout-dev reset --yes
 ```
 
 ## Mock data
@@ -38,7 +42,9 @@ uv run pogoscout-dev fixtures        # regenerate all fixtures
 uv run pogoscout-dev contracts       # export contracts/hop.v1.schema.json + taxonomy
 ```
 
-Fixtures are only ever ingested through the public API. `tests/test_fixtures.py` replays each one and compares the result with `expected_projection.json`.
+Large fixtures (`district_sweep_v1`, about 2000 hops over a 48 x 40 district; `canal_corridor_v1`, about 1200 hops along an 8 x 150 canal corridor) do not commit screenshots: their image events carry `"generate": true` and the replay runner renders the stamped synthetic image in memory, deterministically per scenario and hop. Their `expected_projection.json` is a summary (cell count, position, material and flag counts, anomaly cells).
+
+Fixtures are only ever ingested through the public API. `tests/test_fixtures.py` replays each small one and compares the result with `expected_projection.json`; `tests/test_large_fixtures.py` checks the large ones on a prefix, and in full with `uv run pytest --run-slow` (about 30 s).
 
 ## Test
 

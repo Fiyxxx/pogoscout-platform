@@ -1,7 +1,7 @@
 import type { Cell, MissionSummary } from '../api/types'
 import { latestObservation } from './cells'
 
-export const SOURCE_NAMES = { hardware: 'Scout telemetry', manual: 'Manual entry', mock: 'Recorded replay' } as const
+export const SOURCE_NAMES = { hardware: 'PS-1 scout', manual: 'Manual entry', mock: 'PS-1 scout' } as const
 
 export function recordFor(mission: MissionSummary, cell: Cell) {
   const o = latestObservation(cell)

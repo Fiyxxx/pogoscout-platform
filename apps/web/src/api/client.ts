@@ -7,6 +7,7 @@ import type {
   MissionSummary,
   ReplayState,
   Scenario,
+  WorldResponse,
 } from './types'
 
 export const API_BASE = '/api/v1'
@@ -37,6 +38,7 @@ const post = <T>(path: string, body?: unknown) =>
 
 export const api = {
   health: () => request<Health>('/health'),
+  world: () => request<WorldResponse>('/world'),
   missions: () => request<MissionSummary[]>('/missions'),
   mission: (id: string) => request<MissionSummary>(`/missions/${id}`),
   createMission: (name: string) => post<MissionSummary>('/missions', { name, source: 'manual' }),
@@ -71,4 +73,5 @@ export const keys = {
   replay: (id: string) => ['replay', id] as const,
   health: ['health'] as const,
   scenarios: ['scenarios'] as const,
+  world: ['world'] as const,
 }

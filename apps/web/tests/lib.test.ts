@@ -53,3 +53,26 @@ describe('cells', () => {
     expect(materialName('lava')).toBe('Unknown')
   })
 })
+
+describe('history', () => {
+  test('snapshot shows the mission as it stood at a hop, revisits included', async () => {
+    const { snapshotAt } = await import('../src/lib/history')
+    const { observation } = await import('./factories')
+    const revisited = cell(0, 1, 1, {
+      observations: [observation(1), observation(3, { metal: { value: 1, status: 'ok' } })],
+      metal: 'detected',
+      flags: ['metal'],
+    })
+    const data = cellsResponse([revisited, cell(0, 2, 2), cell(0, 3, 4)])
+    const at2 = snapshotAt(data, 2)
+    expect(at2.path.map((p) => p.hop_id)).toEqual([1, 2])
+    expect(at2.current).toEqual({ x: 0, y: 2 })
+    expect(at2.cells).toHaveLength(2)
+    const early = at2.cells.find((c) => c.y === 1)!
+    expect(early.metal).toBe('not_detected')
+    expect(early.flags).toEqual([])
+    expect(early.visit_count).toBe(1)
+    expect(at2.bounds).toEqual(data.bounds)
+    expect(snapshotAt(data, 4).cells.find((c) => c.y === 1)!.metal).toBe('detected')
+  })
+})

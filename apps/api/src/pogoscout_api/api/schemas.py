@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from pogoscout_api.domain.geo import GeoAnchor
 from pogoscout_api.domain.hops import HopPayload, HopSource, Movement, SensorReading
 from pogoscout_api.domain.projection import SensorCellState
 from pogoscout_api.domain.quality import ClassificationStatus, Flag, Quality
@@ -33,6 +34,7 @@ class MissionCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     source: HopSource = "mock"
     mission_id: str | None = Field(default=None, pattern=MISSION_ID_PATTERN)
+    geo: GeoAnchor | None = None
 
 
 class MissionPatch(BaseModel):
@@ -59,6 +61,7 @@ class MissionSummary(BaseModel):
     started_at: datetime | None
     last_hop_at: datetime | None
     scenario_id: str | None
+    geo: GeoAnchor | None = None
     stats: MissionStats
 
 
@@ -161,10 +164,16 @@ class ReplayCreate(BaseModel):
     scenario_id: str
     mission_id: str | None = Field(default=None, pattern=MISSION_ID_PATTERN)
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    # Defaults to the scenario's simulated start fix.
+    geo: GeoAnchor | None = None
 
 
 class ReplayPlay(BaseModel):
     speed: Literal[1, 2, 4, 8] = 1
+
+
+class ReplayAdvance(BaseModel):
+    events: int = Field(ge=1, le=100_000)
 
 
 class ReplayState(BaseModel):

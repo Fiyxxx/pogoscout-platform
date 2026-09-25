@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { api, exportUrls, keys } from '../api/client'
+import { useNavigate } from 'react-router-dom'
+import { api, keys } from '../api/client'
 import type { MissionStatus, MissionSummary } from '../api/types'
-import { statusView } from '../lib/status'
+import { missionDuration, statusView } from '../lib/status'
+import { NavTabs } from '../components/NavTabs'
 import { HealthLights, TopBar } from '../components/TopBar'
-import { MiniMap } from '../features/missions/MiniMap'
+import { MissionPreview } from '../features/missions/MissionPreview'
 import { NewMissionDialog } from '../features/missions/NewMissionDialog'
-import { duration, elapsed, shortDate } from '../lib/format'
-import { isMaterial, MATERIAL_COLORS, MATERIAL_NAMES } from '../lib/materials'
+import { shortDate } from '../lib/format'
 
 type Tab = 'all' | MissionStatus
 const TABS: { id: Tab; name: string }[] = [
@@ -17,9 +17,6 @@ const TABS: { id: Tab; name: string }[] = [
   { id: 'complete', name: 'Complete' },
   { id: 'aborted', name: 'Aborted' },
 ]
-
-const missionDuration = (m: MissionSummary) =>
-  m.status === 'live' ? `T+${elapsed(m.started_at, m.last_hop_at)}` : duration(m.started_at, m.last_hop_at)
 
 export function MissionsPage() {
   const missions = useQuery({ queryKey: keys.missions, queryFn: api.missions, refetchInterval: 5_000 })
@@ -54,9 +51,7 @@ export function MissionsPage() {
           </div>
         }
       >
-        <nav style={{ display: 'flex', gap: 4, fontSize: 14 }}>
-          <span style={{ padding: '8px 12px', background: 'var(--surface-2)' }}>Missions</span>
-        </nav>
+        <NavTabs />
       </TopBar>
 
       <div style={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
@@ -128,7 +123,7 @@ export function MissionsPage() {
             </table>
           )}
         </main>
-        {selected && <Preview mission={selected} />}
+        {selected && <MissionPreview mission={selected} />}
       </div>
       {creating && <NewMissionDialog onClose={() => setCreating(false)} />}
     </div>
@@ -195,96 +190,5 @@ function MissionRow({ mission: m, active, onSelect }: { mission: MissionSummary;
         {m.stats.flags}
       </td>
     </tr>
-  )
-}
-
-function Preview({ mission: m }: { mission: MissionSummary }) {
-  const cells = useQuery({ queryKey: keys.cells(m.id), queryFn: () => api.cells(m.id) })
-  const st = statusView(m)
-  const total = Object.values(m.stats.materials).reduce((a, b) => a + b, 0)
-  const mix = Object.entries(m.stats.materials)
-    .filter(([label]) => isMaterial(label))
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, n]) => ({ label, pct: Math.round((n / total) * 100) }))
-  const stats: [string, string | number, boolean?][] = [
-    ['Hops', m.stats.hops],
-    ['Metal', m.stats.metal, m.stats.metal > 0],
-    ['VOC', m.stats.voc],
-    ['Flags', m.stats.flags],
-    ['Duration', missionDuration(m)],
-    ['Started', m.started_at ? shortDate(m.started_at).split(' ').pop()! : 'Not started'],
-  ]
-
-  return (
-    <aside style={{ width: 420, flexShrink: 0, borderLeft: '1px solid var(--line)', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="brand" style={{ fontWeight: 700, fontSize: 22, lineHeight: 1.1 }}>
-            {m.name}
-          </span>
-          <span className="mono muted" style={{ fontSize: 12 }}>
-            {m.id}
-          </span>
-        </div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: st.color, whiteSpace: 'nowrap' }}>
-          <span className={st.pulse ? 'dot pulse' : 'dot'} style={{ width: 7, height: 7 }} />
-          {st.text}
-        </span>
-      </div>
-
-      <div
-        style={{
-          position: 'relative', height: 300, border: '1px solid var(--line)', backgroundColor: '#0d0d0c',
-          backgroundImage: 'linear-gradient(#171716 1px, transparent 1px), linear-gradient(90deg, #171716 1px, transparent 1px)', backgroundSize: '20px 20px',
-        }}
-      >
-        {cells.data && <MiniMap data={cells.data} width={370} height={298} />}
-        {m.status_note && (
-          <span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 12, padding: '4px 8px', background: 'var(--bg)', border: '1px solid var(--line-strong)' }}>
-            {m.status_note}
-          </span>
-        )}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', borderTop: '1px solid var(--line)', borderLeft: '1px solid var(--line)' }}>
-        {stats.map(([label, value, signal]) => (
-          <div key={label} style={{ padding: 12, borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span className="key">{label}</span>
-            <span className="mono" style={{ fontSize: 16, color: signal ? 'var(--signal)' : undefined }}>
-              {value}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {mix.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <span className="section-title">Ground cover</span>
-          <div style={{ display: 'flex', height: 8 }}>
-            {mix.map((k) => (
-              <span key={k.label} style={{ width: `${k.pct}%`, background: isMaterial(k.label) ? MATERIAL_COLORS[k.label] : undefined }} />
-            ))}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-            {mix.map((k) => (
-              <span key={k.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                <span style={{ width: 8, height: 8, background: isMaterial(k.label) ? MATERIAL_COLORS[k.label] : undefined }} />
-                {isMaterial(k.label) ? MATERIAL_NAMES[k.label] : k.label}
-                <span className="mono faint">{k.pct}%</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginTop: 'auto', display: 'flex', gap: 8 }}>
-        <Link className="btn btn-primary" style={{ flexGrow: 1, height: 44 }} to={`/missions/${m.id}`}>
-          {m.status === 'live' ? 'Open live mission' : 'Open mission'}
-        </Link>
-        <a className="btn" style={{ height: 44 }} href={exportUrls(m.id).report} target="_blank" rel="noreferrer">
-          Report
-        </a>
-      </div>
-    </aside>
   )
 }

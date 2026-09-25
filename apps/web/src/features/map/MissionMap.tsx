@@ -21,7 +21,7 @@ function webglSupported(): boolean {
 export default function MissionMap({ data, layer, selected, onSelect }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<MissionScene | null>(null)
-  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+  const drag = useRef<{ x: number; y: number; moved: boolean; pan: boolean } | null>(null)
   const [view, setView] = useState<ViewMode>('3d')
   const [metric, setMetric] = useState<HeightMetric>('none')
   const [supported] = useState(webglSupported)
@@ -52,7 +52,7 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
         aria-label="Mission map"
         style={{ width: '100%', height: '100%', display: 'block', cursor: 'grab', touchAction: 'none' }}
         onPointerDown={(e) => {
-          drag.current = { x: e.clientX, y: e.clientY, moved: false }
+          drag.current = { x: e.clientX, y: e.clientY, moved: false, pan: e.button === 2 || e.shiftKey || view === '2d' }
           e.currentTarget.setPointerCapture(e.pointerId)
         }}
         onPointerMove={(e) => {
@@ -61,7 +61,8 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
           const dx = e.clientX - d.x
           const dy = e.clientY - d.y
           if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true
-          sceneRef.current?.orbit(dx, dy)
+          if (d.pan) sceneRef.current?.pan(dx, dy)
+          else sceneRef.current?.orbit(dx, dy)
           d.x = e.clientX
           d.y = e.clientY
         }}
@@ -73,10 +74,20 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
           drag.current = null
         }}
         onWheel={(e) => sceneRef.current?.zoomBy(e.deltaY)}
+        onContextMenu={(e) => e.preventDefault()}
+        onDoubleClick={(e) => {
+          const key = sceneRef.current?.pick(e.clientX, e.clientY)
+          if (key) sceneRef.current?.focus(key)
+        }}
       />
       <div style={{ position: 'absolute', right: 20, top: 16, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-sm" style={{ background: 'rgba(10,10,10,.8)' }} onClick={() => sceneRef.current?.recenter()}>
+          <button
+            className="btn btn-sm"
+            style={{ background: 'rgba(10,10,10,.8)' }}
+            title="Drag to orbit, right-drag or Shift-drag to pan, scroll to zoom, double-click a cell to fly to it"
+            onClick={() => sceneRef.current?.recenter()}
+          >
             Recenter
           </button>
           <div className="segmented">

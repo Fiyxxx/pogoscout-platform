@@ -12,7 +12,13 @@ Base path `/api/v1`. JSON unless noted. Times are ISO 8601 UTC (`2026-09-25T08:0
 ## Missions
 
 ### `POST /missions`
-Body `{"name": str, "source": "mock"|"manual"|"hardware" = "mock", "mission_id"?: str}` → 201 `MissionSummary`.
+Body `{"name": str, "source": "mock"|"manual"|"hardware" = "mock", "mission_id"?: str, "geo"?: GeoAnchor}` → 201 `MissionSummary`.
+
+```jsonc
+// GeoAnchor: GPS fix of cell (0, 0). +y points along heading_deg (clockwise from true north),
+// +x is 90 degrees clockwise from it, and one cell is cell_m metres on the ground.
+{ "lat": 1.3571, "lon": 103.7362, "heading_deg": 20.0, "cell_m": 2.0 }
+```
 
 ### `GET /missions` → `MissionSummary[]` (newest first)
 ### `GET /missions/{mission_id}` → `MissionSummary`
@@ -31,6 +37,7 @@ Body `{"status": "live"|"complete"|"aborted", "status_note"?: str}` → `Mission
   "started_at": "...",           // observed_at of hop 1, null if none
   "last_hop_at": "...",          // observed_at of the highest projected hop, null if none
   "scenario_id": "clean_baseline_v1", // null unless created by replay
+  "geo": GeoAnchor | null,       // null when the scout has no GPS fix
   "stats": {
     "hops": 22,                  // stored hops (projected + pending)
     "cells": 22,                 // distinct projected cells
@@ -125,6 +132,8 @@ Kinds: `hop_accepted` (info), `hop_duplicate` (debug), `hop_conflict` (warning),
 Body `{"scenario_id": str, "mission_id"?: str, "name"?: str}` → 201 `MissionSummary` (status live, source mock, scenario linked). No events applied yet.
 ### `GET /missions/{mission_id}/replay` → `ReplayState`
 ### `POST /missions/{mission_id}/replay/step` → `ReplayState` (applies the next scenario event)
+### `POST /missions/{mission_id}/replay/advance` body `{"events": int}` → `ReplayState`
+Applies up to `events` (1 to 100000) of the next scenario events immediately, in order, through the same services as `step` (used for seeding). Stops at the end of the scenario; reaching the end completes a live mission.
 ### `POST /missions/{mission_id}/replay/play` body `{"speed": 1|2|4|8}` → `ReplayState`
 ### `POST /missions/{mission_id}/replay/pause` → `ReplayState`
 ```jsonc
@@ -143,7 +152,23 @@ Replay applies events through the same application services as the HTTP endpoint
 ## Live
 
 ### `WS /missions/{mission_id}/live`
-Server sends JSON `{"type": "changed", "mission_id": "...", "topics": ["hops","cells","events","mission","replay"], "hop_id": 21 | null}`. Clients refetch the matching queries. Server sends `{"type": "ping"}` every 15 s.
+Server sends JSON `{"type": "changed", "mission_id": "...", "topics": ["hops","cells","events","mission","replay"], "hop_id": 21 | null, "hop_ids": [19, 20, 21]}`. Clients refetch the matching queries. Server sends `{"type": "ping"}` every 15 s.
+
+Notifications are coalesced per mission: at most one `changed` message per ~250 ms. The first change after a quiet period is sent immediately; later changes in the window are merged into one message whose `topics` is the union, `hop_ids` lists every changed hop (sorted, may be empty) and `hop_id` is the most recent of them (null if none).
+
+## Theatre
+
+### `GET /world`
+Every mission with a GPS anchor, newest first, for the theatre map. Missions without `geo` are omitted.
+```jsonc
+{ "missions": [ {
+  "mission": MissionSummary,
+  "geo": GeoAnchor,
+  "current": {"x": 3, "y": 1} | null,
+  "cells": [[3, 2, "soil", 1, 0]]   // [x, y, succeeded material label or null, metal detected 0|1, voc detected 0|1]
+} ] }
+```
+`POST /replays` accepts an optional `geo`; without it the scenario's simulated start fix is used (`replay/sites.py`).
 
 ## Health
 

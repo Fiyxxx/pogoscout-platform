@@ -5,10 +5,11 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from pogoscout_api.application import events
+from pogoscout_api.application import events, positions
 from pogoscout_api.application.notify import Notifier, NullNotifier
+from pogoscout_api.domain.geo import GeoAnchor
 from pogoscout_api.domain.hops import HopPayload, HopSource
-from pogoscout_api.domain.projection import Projection, project
+from pogoscout_api.domain.projection import PlacedHop
 from pogoscout_api.persistence.db import HopRejectionRow, HopRow, MissionRow
 
 MissionStatus = Literal["live", "complete", "aborted"]
@@ -43,6 +44,7 @@ def create_mission(
     mission_id: str | None,
     *,
     scenario_id: str | None = None,
+    geo: GeoAnchor | None = None,
     notifier: Notifier = NULL_NOTIFIER,
 ) -> MissionRow:
     mission_id = mission_id or f"m-{uuid.uuid4().hex[:8]}"
@@ -51,6 +53,7 @@ def create_mission(
     row = MissionRow(
         id=mission_id, name=name, source=source, status="live", scenario_id=scenario_id
     )
+    row.set_geo(geo)
     session.add(row)
     session.commit()
     notifier.publish(mission_id, ["mission"])
@@ -85,11 +88,6 @@ def set_status(
     session.commit()
     notifier.publish(mission_id, ["mission", "events"])
     return row
-
-
-def load_payloads(session: Session, mission_id: str) -> dict[int, HopPayload]:
-    rows = session.scalars(select(HopRow).where(HopRow.mission_id == mission_id))
-    return {r.hop_id: HopPayload.model_validate(r.payload) for r in rows}
 
 
 def ingest_hop(
@@ -142,25 +140,46 @@ def ingest_hop(
         notifier.publish(mission_id, ["cells", "events", "mission"], hop_id)
         raise Conflict(f"hop {hop_id} already stored with different content")
 
-    before = project(load_payloads(session, mission_id))
+    # Hops 1..hop_id-1 all stored means this hop fills the next slot (hop ids are unique, >= 1).
+    before, x, y = positions.prefix_sum(session, mission_id, hop_id - 1)
+    movement = payload.movement
     row = HopRow(
         mission_id=mission_id,
         hop_id=hop_id,
         payload=payload.model_dump(mode="json"),
         content_hash=content_hash,
+        dx=movement.dx,
+        dy=movement.dy,
     )
     session.add(row)
     session.flush()
-    after = project(load_payloads(session, mission_id))
-    for placed in after.placed[len(before.placed) :]:
-        events.record_placement(session, mission_id, placed)
-    if hop_id in after.pending_hop_ids:
-        waiting_for = len(after.placed) + 1
+    if before == hop_id - 1:
+        # Place it and any pending run that now follows it.
+        following = session.scalars(
+            select(HopRow)
+            .where(HopRow.mission_id == mission_id)
+            .where(HopRow.hop_id >= hop_id)
+            .order_by(HopRow.hop_id)
+        )
+        expected = hop_id
+        for stored in following:
+            if stored.hop_id != expected:
+                break
+            hop_payload = (
+                payload if stored.hop_id == hop_id else HopPayload.model_validate(stored.payload)
+            )
+            x, y = x + hop_payload.movement.dx, y + hop_payload.movement.dy
+            events.record_placement(
+                session, mission_id, PlacedHop(stored.hop_id, x, y, hop_payload)
+            )
+            expected += 1
+    else:
         events.record(
             session,
             mission_id,
             "hop_pending",
-            f"Hop {hop_id} arrived out of order, waiting for hop {waiting_for}",
+            f"Hop {hop_id} arrived out of order, waiting for hop "
+            f"{positions.placed_count(session, mission_id) + 1}",
             at=payload.observed_at,
             hop_id=hop_id,
         )
@@ -173,8 +192,3 @@ def list_hops(session: Session, mission_id: str) -> list[HopRow]:
     get_mission(session, mission_id)
     query = select(HopRow).where(HopRow.mission_id == mission_id).order_by(HopRow.hop_id)
     return list(session.scalars(query))
-
-
-def project_mission(session: Session, mission_id: str) -> Projection:
-    rows = list_hops(session, mission_id)
-    return project({r.hop_id: HopPayload.model_validate(r.payload) for r in rows})

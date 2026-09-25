@@ -98,14 +98,35 @@ class InferenceWorker:
             return exc
 
     async def _loop(self) -> None:
-        while True:
-            try:
-                ran = await self.run_pending_jobs()
-            except Exception:
-                log.exception("inference worker poll failed")
-                ran = 0
-            if ran == 0:
-                await asyncio.sleep(self.config.worker_poll_s)
+        """Keep up to `worker_concurrency` jobs in flight, claiming more as each one finishes."""
+        in_flight: set[asyncio.Task] = set()
+        try:
+            while True:
+                free = self.config.worker_concurrency - len(in_flight)
+                tickets: list[inference.JobTicket] = []
+                if free > 0:
+                    try:
+                        with self.db.session_scope() as session:
+                            tickets = inference.claim_due(session, utcnow(), free)
+                    except Exception:
+                        log.exception("inference worker poll failed")
+                for ticket in tickets:
+                    task = asyncio.create_task(self._run(ticket))
+                    in_flight.add(task)
+                    task.add_done_callback(in_flight.discard)
+                if not in_flight:
+                    await asyncio.sleep(self.config.worker_poll_s)
+                elif len(tickets) < free:  # queue drained: wait for a slot or a poll tick
+                    await asyncio.wait(
+                        in_flight,
+                        timeout=self.config.worker_poll_s,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                else:
+                    await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for task in in_flight:
+                task.cancel()  # left `running`; reset to queued on the next start
 
     def start(self) -> None:
         with self.db.session_scope() as session:
