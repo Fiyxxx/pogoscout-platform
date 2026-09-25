@@ -605,7 +605,8 @@ export class ModelScene {
       const bounds = new THREE.Box3().setFromObject(part.group)
       const centre = bounds.getCenter(new THREE.Vector3())
       part.label.position.copy(centre).add(new THREE.Vector3(0, bounds.getSize(new THREE.Vector3()).y / 2 + 0.18, 0))
-      part.label.element.style.opacity = String(k > 0.6 ? (this.selected && part.id !== this.selected ? 0.35 : 1) : 0)
+      const opacity = String(k > 0.6 ? (this.selected && part.id !== this.selected ? 0.35 : 1) : 0)
+      if (part.label.element.style.opacity !== opacity) part.label.element.style.opacity = opacity
     }
 
     // Glide the camera focus towards the chosen part.

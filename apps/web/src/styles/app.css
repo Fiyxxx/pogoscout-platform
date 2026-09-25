@@ -111,7 +111,8 @@ input::placeholder { color: var(--faint); }
 .model-seg button, .model-btn { height: 38px; padding: 0 16px; border: none; background: #ffffff; color: var(--m-ink); font-size: 13px; font-weight: 500; }
 .model-btn { border: 1px solid var(--m-line); }
 .model-seg button[aria-pressed='true'], .model-btn[aria-pressed='true'] { background: var(--m-ink); color: #ffffff; }
-.model-label { display: flex; gap: 6px; align-items: baseline; font: 500 12px var(--font-ui); color: #151515; background: rgba(255, 255, 255, 0.85); padding: 2px 6px; border: 1px solid #d9d9d4; transition: opacity 0.3s ease; white-space: nowrap; }
+/* Labels move every frame; their own compositing layer stops stale-paint trails while orbiting. */
+.model-label { will-change: transform, opacity; backface-visibility: hidden; contain: layout paint; display: flex; gap: 6px; align-items: baseline; font: 500 12px var(--font-ui); color: #151515; background: rgba(255, 255, 255, 0.85); padding: 2px 6px; border: 1px solid #d9d9d4; transition: opacity 0.3s ease; white-space: nowrap; }
 .model-label .num { font-family: var(--font-mono); font-size: 10px; color: #6b6b66; }
 .model-label[data-selected='true'] { border-color: #ff5a1f; }
 .model-label[data-selected='true'] .num { color: #ff5a1f; }
