@@ -1,0 +1,22 @@
+{
+  "request": {
+    "request_id": "inf_4f1c2a9d0b7e4c3f8a6d5e2b1c0f9a87",
+    "mission_id": "PS-0925-01",
+    "hop_id": 17,
+    "image_sha256": "9f2b5c1e3d4a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+    "taxonomy_version": "pogo-materials-v2"
+  },
+  "response": {
+    "schema_version": "1.0",
+    "request_id": "inf_4f1c2a9d0b7e4c3f8a6d5e2b1c0f9a87",
+    "mission_id": "PS-0925-01",
+    "hop_id": 17,
+    "image_sha256": "9f2b5c1e3d4a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+    "status": "succeeded",
+    "label": "mud",
+    "confidence": 0.83,
+    "model_version": "material-model 0.3.0",
+    "taxonomy_version": "pogo-materials-v2",
+    "classified_at": "2026-09-25T08:14:33Z"
+  }
+}

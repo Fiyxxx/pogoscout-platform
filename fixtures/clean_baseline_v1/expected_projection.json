@@ -125,7 +125,14 @@
         11
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "leaf_litter",
+        "confidence": 0.9
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 2,
@@ -134,7 +141,14 @@
         12
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.89
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 0,
@@ -143,7 +157,16 @@
         1
       ],
       "metal": "not_detected",
-      "voc": "detected"
+      "voc": "detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.93
+      },
+      "quality": "complete",
+      "flags": [
+        "voc"
+      ]
     },
     {
       "x": 1,
@@ -152,7 +175,14 @@
         10
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "leaf_litter",
+        "confidence": 0.83
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 2,
@@ -161,7 +191,14 @@
         13
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.92
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 3,
@@ -170,7 +207,14 @@
         22
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.84
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 0,
@@ -179,7 +223,14 @@
         2
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.83
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 1,
@@ -188,7 +239,14 @@
         9
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "leaf_litter",
+        "confidence": 0.8
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 2,
@@ -197,7 +255,14 @@
         14
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.92
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 3,
@@ -206,7 +271,16 @@
         21
       ],
       "metal": "detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.86
+      },
+      "quality": "complete",
+      "flags": [
+        "metal"
+      ]
     },
     {
       "x": 0,
@@ -215,7 +289,14 @@
         3
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.81
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 1,
@@ -224,7 +305,16 @@
         8
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "leaf_litter",
+        "confidence": 0.79
+      },
+      "quality": "low_confidence",
+      "flags": [
+        "low_confidence"
+      ]
     },
     {
       "x": 2,
@@ -233,7 +323,14 @@
         15
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.86
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 3,
@@ -242,7 +339,14 @@
         20
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.81
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 0,
@@ -251,7 +355,16 @@
         4
       ],
       "metal": "detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.8
+      },
+      "quality": "complete",
+      "flags": [
+        "metal"
+      ]
     },
     {
       "x": 1,
@@ -260,7 +373,14 @@
         7
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "leaf_litter",
+        "confidence": 0.9
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 2,
@@ -269,7 +389,14 @@
         16
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.87
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 3,
@@ -278,7 +405,14 @@
         19
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.93
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 0,
@@ -287,7 +421,14 @@
         5
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "concrete",
+        "confidence": 0.93
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 1,
@@ -296,7 +437,14 @@
         6
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "concrete",
+        "confidence": 0.89
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 2,
@@ -305,7 +453,14 @@
         17
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "concrete",
+        "confidence": 0.84
+      },
+      "quality": "complete",
+      "flags": []
     },
     {
       "x": 3,
@@ -314,7 +469,14 @@
         18
       ],
       "metal": "not_detected",
-      "voc": "not_detected"
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "concrete",
+        "confidence": 0.95
+      },
+      "quality": "complete",
+      "flags": []
     }
   ]
 }

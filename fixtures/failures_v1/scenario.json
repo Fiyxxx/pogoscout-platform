@@ -1,0 +1,381 @@
+{
+  "scenario_id": "failures_v1",
+  "format_version": "1",
+  "description": "Failure modes: duplicate and conflicting resends, a missing and a delayed screenshot, a sensor error, a missing reading, an out-of-order hop and a low-confidence result.",
+  "seed": 902,
+  "mission": {
+    "name": "Failure modes",
+    "source": "mock"
+  },
+  "events": [
+    {
+      "type": "hop",
+      "seq": 1,
+      "at_ms": 0,
+      "hop_id": 1,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:00Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 2,
+      "at_ms": 600,
+      "hop_id": 1,
+      "file": "images/hop_001.png",
+      "mock_label": "soil",
+      "mock_confidence": 0.95
+    },
+    {
+      "type": "hop",
+      "seq": 3,
+      "at_ms": 4000,
+      "hop_id": 2,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:04Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 4,
+      "at_ms": 4600,
+      "hop_id": 2,
+      "file": "images/hop_002.png",
+      "mock_label": "soil",
+      "mock_confidence": 0.91
+    },
+    {
+      "type": "hop",
+      "seq": 5,
+      "at_ms": 5200,
+      "hop_id": 2,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:04Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "hop",
+      "seq": 6,
+      "at_ms": 8000,
+      "hop_id": 3,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:08Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 7,
+      "at_ms": 8600,
+      "hop_id": 3,
+      "file": "images/hop_003.png",
+      "mock_label": "gravel",
+      "mock_confidence": 0.88
+    },
+    {
+      "type": "hop",
+      "seq": 8,
+      "at_ms": 9200,
+      "hop_id": 3,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:08Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 1,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "hop",
+      "seq": 9,
+      "at_ms": 12000,
+      "hop_id": 4,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:12Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "hop",
+      "seq": 10,
+      "at_ms": 16000,
+      "hop_id": 5,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:16Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 1,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "hop",
+      "seq": 11,
+      "at_ms": 20000,
+      "hop_id": 6,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:20Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": null,
+            "status": "error"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 12,
+      "at_ms": 20600,
+      "hop_id": 6,
+      "file": "images/hop_006.png",
+      "mock_label": "concrete",
+      "mock_confidence": 0.85
+    },
+    {
+      "type": "hop",
+      "seq": 13,
+      "at_ms": 24000,
+      "hop_id": 7,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:24Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "L",
+          "dx": -1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": null,
+            "status": "missing"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 14,
+      "at_ms": 24600,
+      "hop_id": 7,
+      "file": "images/hop_007.png",
+      "mock_label": "concrete",
+      "mock_confidence": 0.94
+    },
+    {
+      "type": "image",
+      "seq": 15,
+      "at_ms": 25200,
+      "hop_id": 5,
+      "file": "images/hop_005.png",
+      "mock_label": "mud",
+      "mock_confidence": 0.91
+    },
+    {
+      "type": "hop",
+      "seq": 16,
+      "at_ms": 32000,
+      "hop_id": 9,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:32Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "L",
+          "dx": -1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 17,
+      "at_ms": 32600,
+      "hop_id": 9,
+      "file": "images/hop_009.png",
+      "mock_label": "soil",
+      "mock_confidence": 0.55
+    },
+    {
+      "type": "hop",
+      "seq": 18,
+      "at_ms": 33000,
+      "hop_id": 8,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:28Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 1,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 19,
+      "at_ms": 33600,
+      "hop_id": 8,
+      "file": "images/hop_008.png",
+      "mock_label": "mud",
+      "mock_confidence": 0.9
+    }
+  ]
+}

@@ -1,0 +1,1308 @@
+{
+  "scenario_id": "park_connector_v1",
+  "format_version": "1",
+  "description": "Six by six serpentine sweep of a park connector: paved path, sand pit, pond, two metal anomalies, one VOC cue and two low-confidence cells.",
+  "seed": 924,
+  "mission": {
+    "name": "Park connector sweep",
+    "source": "mock"
+  },
+  "events": [
+    {
+      "type": "hop",
+      "seq": 1,
+      "at_ms": 0,
+      "hop_id": 1,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:00Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 2,
+      "at_ms": 600,
+      "hop_id": 1,
+      "file": "images/hop_001.png",
+      "mock_label": "mud",
+      "mock_confidence": 0.9
+    },
+    {
+      "type": "hop",
+      "seq": 3,
+      "at_ms": 4000,
+      "hop_id": 2,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:04Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 4,
+      "at_ms": 4600,
+      "hop_id": 2,
+      "file": "images/hop_002.png",
+      "mock_label": "soil",
+      "mock_confidence": 0.87
+    },
+    {
+      "type": "hop",
+      "seq": 5,
+      "at_ms": 8000,
+      "hop_id": 3,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:08Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 6,
+      "at_ms": 8600,
+      "hop_id": 3,
+      "file": "images/hop_003.png",
+      "mock_label": "soil",
+      "mock_confidence": 0.83
+    },
+    {
+      "type": "hop",
+      "seq": 7,
+      "at_ms": 12000,
+      "hop_id": 4,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:12Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 8,
+      "at_ms": 12600,
+      "hop_id": 4,
+      "file": "images/hop_004.png",
+      "mock_label": "grass_vegetation",
+      "mock_confidence": 0.88
+    },
+    {
+      "type": "hop",
+      "seq": 9,
+      "at_ms": 16000,
+      "hop_id": 5,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:16Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 1,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 10,
+      "at_ms": 16600,
+      "hop_id": 5,
+      "file": "images/hop_005.png",
+      "mock_label": "leaf_litter",
+      "mock_confidence": 0.86
+    },
+    {
+      "type": "hop",
+      "seq": 11,
+      "at_ms": 20000,
+      "hop_id": 6,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:20Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 12,
+      "at_ms": 20600,
+      "hop_id": 6,
+      "file": "images/hop_006.png",
+      "mock_label": "leaf_litter",
+      "mock_confidence": 0.91
+    },
+    {
+      "type": "hop",
+      "seq": 13,
+      "at_ms": 24000,
+      "hop_id": 7,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:24Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 14,
+      "at_ms": 24600,
+      "hop_id": 7,
+      "file": "images/hop_007.png",
+      "mock_label": "leaf_litter",
+      "mock_confidence": 0.83
+    },
+    {
+      "type": "hop",
+      "seq": 15,
+      "at_ms": 28000,
+      "hop_id": 8,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:28Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 16,
+      "at_ms": 28600,
+      "hop_id": 8,
+      "file": "images/hop_008.png",
+      "mock_label": "grass_vegetation",
+      "mock_confidence": 0.85
+    },
+    {
+      "type": "hop",
+      "seq": 17,
+      "at_ms": 32000,
+      "hop_id": 9,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:32Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 18,
+      "at_ms": 32600,
+      "hop_id": 9,
+      "file": "images/hop_009.png",
+      "mock_label": "grass_vegetation",
+      "mock_confidence": 0.87
+    },
+    {
+      "type": "hop",
+      "seq": 19,
+      "at_ms": 36000,
+      "hop_id": 10,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:36Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 20,
+      "at_ms": 36600,
+      "hop_id": 10,
+      "file": "images/hop_010.png",
+      "mock_label": "soil",
+      "mock_confidence": 0.91
+    },
+    {
+      "type": "hop",
+      "seq": 21,
+      "at_ms": 40000,
+      "hop_id": 11,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:40Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 1,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 22,
+      "at_ms": 40600,
+      "hop_id": 11,
+      "file": "images/hop_011.png",
+      "mock_label": "mud",
+      "mock_confidence": 0.62
+    },
+    {
+      "type": "hop",
+      "seq": 23,
+      "at_ms": 44000,
+      "hop_id": 12,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:44Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 24,
+      "at_ms": 44600,
+      "hop_id": 12,
+      "file": "images/hop_012.png",
+      "mock_label": "water",
+      "mock_confidence": 0.97
+    },
+    {
+      "type": "hop",
+      "seq": 25,
+      "at_ms": 48000,
+      "hop_id": 13,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:48Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 26,
+      "at_ms": 48600,
+      "hop_id": 13,
+      "file": "images/hop_013.png",
+      "mock_label": "tiles_pavers",
+      "mock_confidence": 0.9
+    },
+    {
+      "type": "hop",
+      "seq": 27,
+      "at_ms": 52000,
+      "hop_id": 14,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:52Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 28,
+      "at_ms": 52600,
+      "hop_id": 14,
+      "file": "images/hop_014.png",
+      "mock_label": "tiles_pavers",
+      "mock_confidence": 0.88
+    },
+    {
+      "type": "hop",
+      "seq": 29,
+      "at_ms": 56000,
+      "hop_id": 15,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:00:56Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 30,
+      "at_ms": 56600,
+      "hop_id": 15,
+      "file": "images/hop_015.png",
+      "mock_label": "tiles_pavers",
+      "mock_confidence": 0.88
+    },
+    {
+      "type": "hop",
+      "seq": 31,
+      "at_ms": 60000,
+      "hop_id": 16,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:00Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 32,
+      "at_ms": 60600,
+      "hop_id": 16,
+      "file": "images/hop_016.png",
+      "mock_label": "tiles_pavers",
+      "mock_confidence": 0.83
+    },
+    {
+      "type": "hop",
+      "seq": 33,
+      "at_ms": 64000,
+      "hop_id": 17,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:04Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 34,
+      "at_ms": 64600,
+      "hop_id": 17,
+      "file": "images/hop_017.png",
+      "mock_label": "tiles_pavers",
+      "mock_confidence": 0.95
+    },
+    {
+      "type": "hop",
+      "seq": 35,
+      "at_ms": 68000,
+      "hop_id": 18,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:08Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 36,
+      "at_ms": 68600,
+      "hop_id": 18,
+      "file": "images/hop_018.png",
+      "mock_label": "tiles_pavers",
+      "mock_confidence": 0.83
+    },
+    {
+      "type": "hop",
+      "seq": 37,
+      "at_ms": 72000,
+      "hop_id": 19,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:12Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 38,
+      "at_ms": 72600,
+      "hop_id": 19,
+      "file": "images/hop_019.png",
+      "mock_label": "concrete",
+      "mock_confidence": 0.91
+    },
+    {
+      "type": "hop",
+      "seq": 39,
+      "at_ms": 76000,
+      "hop_id": 20,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:16Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 40,
+      "at_ms": 76600,
+      "hop_id": 20,
+      "file": "images/hop_020.png",
+      "mock_label": "concrete",
+      "mock_confidence": 0.83
+    },
+    {
+      "type": "hop",
+      "seq": 41,
+      "at_ms": 80000,
+      "hop_id": 21,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:20Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 42,
+      "at_ms": 80600,
+      "hop_id": 21,
+      "file": "images/hop_021.png",
+      "mock_label": "gravel",
+      "mock_confidence": 0.74
+    },
+    {
+      "type": "hop",
+      "seq": 43,
+      "at_ms": 84000,
+      "hop_id": 22,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:24Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 44,
+      "at_ms": 84600,
+      "hop_id": 22,
+      "file": "images/hop_022.png",
+      "mock_label": "gravel",
+      "mock_confidence": 0.89
+    },
+    {
+      "type": "hop",
+      "seq": 45,
+      "at_ms": 88000,
+      "hop_id": 23,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:28Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 46,
+      "at_ms": 88600,
+      "hop_id": 23,
+      "file": "images/hop_023.png",
+      "mock_label": "sand",
+      "mock_confidence": 0.96
+    },
+    {
+      "type": "hop",
+      "seq": 47,
+      "at_ms": 92000,
+      "hop_id": 24,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:32Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 48,
+      "at_ms": 92600,
+      "hop_id": 24,
+      "file": "images/hop_024.png",
+      "mock_label": "sand",
+      "mock_confidence": 0.83
+    },
+    {
+      "type": "hop",
+      "seq": 49,
+      "at_ms": 96000,
+      "hop_id": 25,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:36Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 50,
+      "at_ms": 96600,
+      "hop_id": 25,
+      "file": "images/hop_025.png",
+      "mock_label": "sand",
+      "mock_confidence": 0.96
+    },
+    {
+      "type": "hop",
+      "seq": 51,
+      "at_ms": 100000,
+      "hop_id": 26,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:40Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 52,
+      "at_ms": 100600,
+      "hop_id": 26,
+      "file": "images/hop_026.png",
+      "mock_label": "sand",
+      "mock_confidence": 0.91
+    },
+    {
+      "type": "hop",
+      "seq": 53,
+      "at_ms": 104000,
+      "hop_id": 27,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:44Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 1,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 54,
+      "at_ms": 104600,
+      "hop_id": 27,
+      "file": "images/hop_027.png",
+      "mock_label": "gravel",
+      "mock_confidence": 0.92
+    },
+    {
+      "type": "hop",
+      "seq": 55,
+      "at_ms": 108000,
+      "hop_id": 28,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:48Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 56,
+      "at_ms": 108600,
+      "hop_id": 28,
+      "file": "images/hop_028.png",
+      "mock_label": "grass_vegetation",
+      "mock_confidence": 0.94
+    },
+    {
+      "type": "hop",
+      "seq": 57,
+      "at_ms": 112000,
+      "hop_id": 29,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:52Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 58,
+      "at_ms": 112600,
+      "hop_id": 29,
+      "file": "images/hop_029.png",
+      "mock_label": "concrete",
+      "mock_confidence": 0.96
+    },
+    {
+      "type": "hop",
+      "seq": 59,
+      "at_ms": 116000,
+      "hop_id": 30,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:01:56Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "F",
+          "dx": 0,
+          "dy": 1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 60,
+      "at_ms": 116600,
+      "hop_id": 30,
+      "file": "images/hop_030.png",
+      "mock_label": "concrete",
+      "mock_confidence": 0.94
+    },
+    {
+      "type": "hop",
+      "seq": 61,
+      "at_ms": 120000,
+      "hop_id": 31,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:02:00Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "R",
+          "dx": 1,
+          "dy": 0
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 62,
+      "at_ms": 120600,
+      "hop_id": 31,
+      "file": "images/hop_031.png",
+      "mock_label": "asphalt",
+      "mock_confidence": 0.92
+    },
+    {
+      "type": "hop",
+      "seq": 63,
+      "at_ms": 124000,
+      "hop_id": 32,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:02:04Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 64,
+      "at_ms": 124600,
+      "hop_id": 32,
+      "file": "images/hop_032.png",
+      "mock_label": "asphalt",
+      "mock_confidence": 0.84
+    },
+    {
+      "type": "hop",
+      "seq": 65,
+      "at_ms": 128000,
+      "hop_id": 33,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:02:08Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 66,
+      "at_ms": 128600,
+      "hop_id": 33,
+      "file": "images/hop_033.png",
+      "mock_label": "asphalt",
+      "mock_confidence": 0.9
+    },
+    {
+      "type": "hop",
+      "seq": 67,
+      "at_ms": 132000,
+      "hop_id": 34,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:02:12Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 68,
+      "at_ms": 132600,
+      "hop_id": 34,
+      "file": "images/hop_034.png",
+      "mock_label": "water",
+      "mock_confidence": 0.97
+    },
+    {
+      "type": "hop",
+      "seq": 69,
+      "at_ms": 136000,
+      "hop_id": 35,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:02:16Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 70,
+      "at_ms": 136600,
+      "hop_id": 35,
+      "file": "images/hop_035.png",
+      "mock_label": "asphalt",
+      "mock_confidence": 0.88
+    },
+    {
+      "type": "hop",
+      "seq": 71,
+      "at_ms": 140000,
+      "hop_id": 36,
+      "payload": {
+        "schema_version": "1.0",
+        "observed_at": "2026-09-25T08:02:20Z",
+        "producer_id": "mock-generator",
+        "source": "mock",
+        "movement": {
+          "command": "B",
+          "dx": 0,
+          "dy": -1
+        },
+        "sensors": {
+          "metal": {
+            "value": 0,
+            "status": "ok"
+          },
+          "voc": {
+            "value": 0,
+            "status": "ok"
+          }
+        }
+      }
+    },
+    {
+      "type": "image",
+      "seq": 72,
+      "at_ms": 140600,
+      "hop_id": 36,
+      "file": "images/hop_036.png",
+      "mock_label": "asphalt",
+      "mock_confidence": 0.95
+    }
+  ]
+}

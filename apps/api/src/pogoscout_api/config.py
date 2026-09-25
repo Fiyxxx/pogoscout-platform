@@ -10,10 +10,28 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+pysqlite:///../../data/pogoscout.sqlite3"
     image_dir: Path = Path("../../data/images")
     fixture_dir: Path = Path("../../fixtures")
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    # Material classifier (separate ML service, reached by contract only).
     classifier: Literal["mock", "http", "disabled"] = "mock"
     ml_service_url: str | None = None
     taxonomy_version: str = "pogo-materials-v2"
-    cors_origins: list[str] = ["http://localhost:5173"]
+    classifier_timeout_s: float = 10.0
+    mock_model_version: str = "mock-material 0.1.0"
+    mock_latency_s: float = 0.6
+
+    # Evidence
+    max_image_bytes: int = 10 * 1024 * 1024
+
+    # Inference worker (persisted outbox in SQLite)
+    worker_enabled: bool = True
+    worker_poll_s: float = 0.3
+    worker_concurrency: int = 4
+    max_attempts: int = 3
+    retry_base_s: float = 1.0
+
+    # Live
+    live_ping_s: float = 15.0
 
 
 settings = Settings()

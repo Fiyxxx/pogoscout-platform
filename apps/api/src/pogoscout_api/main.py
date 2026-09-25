@@ -1,13 +1,32 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from pogoscout_api.api.routes import router
+from pogoscout_api.adapters.classifier import ClassifierClient
+from pogoscout_api.api import export_routes, replay_routes, routes
+from pogoscout_api.api.schemas import HealthOut
 from pogoscout_api.config import Settings, settings
-from pogoscout_api.persistence.db import Database
+from pogoscout_api.context import build_context
+from pogoscout_api.live import ws
 
 
-def create_app(config: Settings = settings) -> FastAPI:
-    app = FastAPI(title="PogoScout Platform API", version="0.1.0")
+def create_app(config: Settings = settings, classifier: ClassifierClient | None = None) -> FastAPI:
+    ctx = build_context(config, classifier)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        if config.worker_enabled:
+            ctx.worker.start()
+        try:
+            yield
+        finally:
+            await ctx.replay.shutdown()
+            await ctx.worker.stop()
+
+    app = FastAPI(title="PogoScout Platform API", version="0.2.0", lifespan=lifespan)
+    app.state.ctx = ctx
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors_origins,
@@ -15,14 +34,20 @@ def create_app(config: Settings = settings) -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.state.db = Database(config.database_url)
-    app.state.db.create_all()
+    @app.get("/api/v1/health", response_model=HealthOut)
+    async def health() -> HealthOut:
+        classifier_status, model_version = await ctx.classifier.health()
+        return HealthOut(
+            status="ok",
+            classifier=ctx.classifier.name,
+            classifier_status=classifier_status,
+            model_version=model_version,
+        )
 
-    @app.get("/api/v1/health")
-    def health() -> dict[str, str]:
-        return {"status": "ok", "classifier": config.classifier}
-
-    app.include_router(router)
+    app.include_router(routes.router)
+    app.include_router(replay_routes.router)
+    app.include_router(export_routes.router)
+    app.include_router(ws.router)
     return app
 
 

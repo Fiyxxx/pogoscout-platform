@@ -1,0 +1,23 @@
+/* PogoScout design tokens: Monochrome Precision. One signal colour (orange) for anything that needs attention. */
+:root {
+  --bg: #0a0a0a;
+  --surface: #111110;
+  --surface-2: #161615;
+  --hover: #1a1a19;
+  --line: #232321;
+  --line-soft: #1a1a19;
+  --line-strong: #3a3a37;
+  --text: #f2f2f0;
+  --text-2: #c9c9c5;
+  --muted: #8a8a86;
+  --faint: #6e6e6a;
+  --signal: #ff5a1f;
+
+  --font-brand: 'Archivo Variable', 'Archivo', sans-serif;
+  --font-ui: 'Geist Variable', 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, monospace;
+
+  --topbar-h: 73px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: dark;
+}

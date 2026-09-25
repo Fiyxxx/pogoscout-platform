@@ -1,0 +1,70 @@
+openapi: 3.1.0
+info:
+  title: PogoScout material classifier
+  version: 1.0.0
+  description: >
+    Contract between pogoscout-platform (client) and pogoscout-material-model (server).
+    Neither repository imports the other. The platform verifies every correlation field,
+    the image hash, the taxonomy version, label membership and the confidence range, and
+    stores the raw response. Timeouts, connection errors, 429 and 5xx are retried with
+    exponential backoff; other 4xx and invalid responses are recorded as failed.
+paths:
+  /api/v1/classify:
+    post:
+      operationId: classify
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, request_id, mission_id, hop_id, image_sha256, taxonomy_version]
+              properties:
+                image: {type: string, format: binary, description: image/png or image/jpeg}
+                request_id: {type: string, description: "Platform inference job id, e.g. inf_..."}
+                mission_id: {type: string}
+                hop_id: {type: integer, minimum: 1}
+                image_sha256: {type: string, pattern: "^[0-9a-f]{64}$"}
+                taxonomy_version: {type: string, example: pogo-materials-v2}
+      responses:
+        "200":
+          description: Classification result (succeeded or failed), echoing correlation fields.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassifyResponse"}
+        "422": {description: Invalid request. Not retried.}
+        "503": {description: Temporarily unavailable. Retried.}
+  /api/v1/health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: Service ready.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_version: {type: string, example: material-model 0.3.0}
+components:
+  schemas:
+    ClassifyResponse:
+      type: object
+      required: [request_id, mission_id, hop_id, image_sha256, status, taxonomy_version]
+      properties:
+        schema_version: {type: string, const: "1.0"}
+        request_id: {type: string}
+        mission_id: {type: string}
+        hop_id: {type: integer}
+        image_sha256: {type: string}
+        status: {type: string, enum: [succeeded, failed]}
+        label:
+          type: [string, "null"]
+          description: Required when succeeded. One of taxonomy.pogo-materials-v2.json labels.
+          enum: [soil, mud, sand, gravel, grass_vegetation, leaf_litter, concrete, asphalt,
+                 tiles_pavers, water, null]
+        confidence: {type: [number, "null"], minimum: 0, maximum: 1}
+        model_version: {type: [string, "null"], example: material-model 0.3.0}
+        taxonomy_version: {type: string, example: pogo-materials-v2}
+        classified_at: {type: string, format: date-time}
+        error: {type: [string, "null"], description: Reason when status is failed.}

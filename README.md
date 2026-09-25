@@ -2,13 +2,13 @@
 
 Offline-first operator dashboard for PogoScout, a hopping reconnaissance scout. It maps one observation per logical hop onto a layered square grid: nominal path, metal-anomaly and VOC-cue readings, screenshot evidence, and material classifications from a separate ML service.
 
-It covers the platform only. Hardware, sensor drivers and model training are out of scope, and the material model lives in `pogoscout-material-model`. See [docs/HANDOFF.md](docs/HANDOFF.md) for product scope and semantics, and [docs/ROADMAP.md](docs/ROADMAP.md) for the build plan.
+It covers the platform only. Hardware, sensor drivers and model training are out of scope, and the material model lives in `pogoscout-material-model`. See [docs/HANDOFF.md](docs/HANDOFF.md) for product scope and semantics, [docs/API.md](docs/API.md) for the API contract, and [docs/ROADMAP.md](docs/ROADMAP.md) for the build plan.
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
-| Frontend | React 19, TypeScript, Vite, TanStack Query, SVG grid, React Three Fiber (lazy, 2.5D) |
+| Frontend | React 19, TypeScript, Vite, TanStack Query, React Router, Three.js map (lazy-loaded), local fonts |
 | Backend | FastAPI, Pydantic v2, SQLAlchemy 2, SQLite |
 | Evidence | Filesystem images + SHA-256 metadata in SQLite |
 | Live | WebSocket invalidations + REST snapshots |
@@ -24,8 +24,8 @@ cd apps/api && uv sync && uv run pogoscout-api      # http://localhost:8000/docs
 # terminal 2
 cd apps/web && npm install && npm run dev           # http://localhost:5173
 
-# terminal 3: replay a fixture through the public API, then pick "demo-clean" in the UI
-cd apps/api && uv run pogoscout-dev load clean_baseline_v1 --mission-id demo-clean
+# terminal 3: seed the demo missions (Grid Sweep 01, Park Connector Sweep, Drainage Culvert)
+cd apps/api && uv run pogoscout-dev seed
 ```
 
 ## Mock data

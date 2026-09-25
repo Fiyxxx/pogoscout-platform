@@ -1,4 +1,4 @@
-"""Developer CLI: `uv run pogoscout-dev {fixtures,contracts,load}`."""
+"""Developer CLI: `uv run pogoscout-dev {fixtures,contracts,load,seed}`."""
 
 import argparse
 import json
@@ -42,11 +42,47 @@ def load_fixture(name: str, api: str, mission_id: str | None) -> None:
         mission = client.post("/missions", json=body).raise_for_status().json()
         hops = [e for e in scenario.events if isinstance(e, HopEvent)]
         for event in hops:
-            client.put(
+            response = client.put(
                 f"/missions/{mission['id']}/hops/{event.hop_id}",
                 json=event.payload.model_dump(mode="json"),
-            ).raise_for_status()
+            )
+            if response.status_code != 409:  # conflicting resends are expected in fault fixtures
+                response.raise_for_status()
     print(f"loaded {len(hops)} hops into mission {mission['id']}")
+
+
+# (scenario, mission id, name, final status, note). Created oldest first so the list reads
+# newest first in the UI.
+DEMO_SET: list[tuple[str, str, str, str | None, str | None]] = [
+    ("failures_v1", "PS-0924-02", "Drainage Culvert", "aborted", "Link lost after hop 9"),
+    ("park_connector_v1", "PS-0924-04", "Park Connector Sweep", None, None),
+    ("clean_baseline_v1", "PS-0925-01", "Grid Sweep 01", "live", None),
+]
+
+
+def seed_demo(api: str) -> None:
+    """Create the demo missions against a running API by stepping replays to the end."""
+    with httpx.Client(base_url=api, timeout=30) as client:
+        for scenario_id, mission_id, name, final_status, note in DEMO_SET:
+            if client.get(f"/missions/{mission_id}").status_code == 200:
+                print(f"skip {mission_id}: already exists")
+                continue
+            body = {"scenario_id": scenario_id, "mission_id": mission_id, "name": name}
+            client.post("/replays", json=body).raise_for_status()
+            steps = 0
+            while True:
+                state = client.post(f"/missions/{mission_id}/replay/step").raise_for_status()
+                steps += 1
+                if state.json()["finished"]:
+                    break
+            if final_status is not None:
+                patch = {"status": final_status, "status_note": note}
+                client.patch(f"/missions/{mission_id}", json=patch).raise_for_status()
+            summary = client.get(f"/missions/{mission_id}").raise_for_status().json()
+            print(
+                f"seeded {mission_id} ({name}) from {scenario_id}: {steps} events, "
+                f"status {summary['status']}"
+            )
 
 
 def main() -> None:
@@ -59,11 +95,15 @@ def main() -> None:
     load.add_argument("name")
     load.add_argument("--api", default="http://127.0.0.1:8000/api/v1")
     load.add_argument("--mission-id")
+    seed = sub.add_parser("seed", help="create the demo mission set in a running API")
+    seed.add_argument("--api", default="http://127.0.0.1:8000/api/v1")
     args = parser.parse_args()
 
     if args.command == "fixtures":
         generate_fixtures(args.names)
     elif args.command == "contracts":
         export_contracts()
+    elif args.command == "seed":
+        seed_demo(args.api)
     else:
         load_fixture(args.name, args.api, args.mission_id)

@@ -39,40 +39,40 @@ The building blocks, in dependency order. Each milestone ends with a demoable sl
 - [x] Tests: domain, API, projection, grid component
 
 ### M2 Replay & live
-- [ ] Replay engine: load scenario, cursor, `step` / `reset`
-- [ ] WebSocket hub: per-mission `changed` events; frontend invalidates queries
-- [ ] Reconnect with backoff + refetch; connection indicator in top bar
-- [ ] Mock-source banner when mission source is `mock`
-- [ ] Tests: replay determinism, WS notify
+- [x] Replay engine: load scenario, cursor, `step` / `reset`
+- [x] WebSocket hub: per-mission `changed` events; frontend invalidates queries
+- [x] Reconnect with backoff + refetch; connection indicator in top bar
+- [x] Mock-source banner when mission source is `mock`
+- [x] Tests: replay determinism, WS notify
 
 ### M3 Evidence & classifier
-- [ ] `POST /missions/{id}/hops/{hop_id}/image`: store file, SHA-256, idempotent/conflict
-- [ ] `inference_jobs` outbox table + background worker with retries/backoff
-- [ ] Classifier protocol + Mock / Http / Disabled adapters (config-selected)
-- [ ] Append-only `classifications` table; response validation (ids, hash, label, confidence, taxonomy)
-- [ ] Classification states: none, pending, retrying, succeeded, failed, unavailable
-- [ ] Inspector: visit list, screenshot, sensor facts, classification history, raw JSON
-- [ ] Tests: missing/delayed/duplicate/conflicting image, ML failure + retry
+- [x] `POST /missions/{id}/hops/{hop_id}/image`: store file, SHA-256, idempotent/conflict
+- [x] `inference_jobs` outbox table + background worker with retries/backoff
+- [x] Classifier protocol + Mock / Http / Disabled adapters (config-selected)
+- [x] Append-only `classifications` table; response validation (ids, hash, label, confidence, taxonomy)
+- [x] Classification states: none, pending, retrying, succeeded, failed, unavailable
+- [x] Inspector: visit list, screenshot, sensor facts, classification history, raw JSON
+- [x] Tests: missing/delayed/duplicate/conflicting image, ML failure + retry
 
 ### M4 Full dashboard
-- [ ] Layer selector: combined, material, metal, activity cue, data quality + legends
-- [ ] Data-quality derivation (complete/pending/low-confidence/missing/failed/conflicting)
-- [ ] Event timeline (hops, images, results, warnings)
-- [ ] Timed playback, pause, speed, fault-injection profiles
-- [ ] Fixtures: `anomaly_clusters_v1`, `wet_obstruction_v1`, `failures_v1`
-- [ ] Export: mission JSON + cells/hops CSV
+- [x] Layer selector: combined, material, metal, activity cue, data quality + legends
+- [x] Data-quality derivation (complete/pending/low-confidence/missing/failed/conflicting)
+- [x] Event timeline (hops, images, results, warnings)
+- [x] Timed playback, pause, speed, fault-injection profiles
+- [x] Fixtures: `anomaly_clusters_v1`, `wet_obstruction_v1`, `failures_v1`
+- [x] Export: mission JSON + cells/hops CSV
 - [ ] Manual hop entry form
 
 ### M5 2.5D & polish
-- [ ] Lazy-loaded R3F view from `/cells`; metric selector (uncertainty, visit count)
-- [ ] "Analytical metric, not physical elevation" label always visible
+- [x] Lazy-loaded Three.js map (material-rendered ground, 2D/3D camera, uncertainty height)
+- [x] "Analytical metric, not physical elevation" label always visible
 - [ ] Empty/loading/error states, keyboard navigation, colour-blind-safe palette
 - [ ] Playwright E2E: create mission → replay → inspect cell → export
 - [ ] One-command start script + demo runbook (+ optional Docker Compose)
 
 ### M6 Real ML integration
-- [ ] Publish `contracts/ml-classify.v1.openapi.yaml`, agree with ML teammate
-- [ ] `HttpClassifierClient` + contract tests against example responses
+- [ ] Agree `contracts/ml-classify.v1.openapi.yaml` (published) with the ML teammate
+- [x] `HttpClassifierClient` + contract tests against example responses
 - [ ] End-to-end run against the teammate's service
 
 ## Open decisions

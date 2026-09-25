@@ -1,0 +1,198 @@
+{
+  "scenario_id": "failures_v1",
+  "current": {
+    "x": 0,
+    "y": 1
+  },
+  "path": [
+    {
+      "hop_id": 1,
+      "x": 0,
+      "y": 1
+    },
+    {
+      "hop_id": 2,
+      "x": 0,
+      "y": 2
+    },
+    {
+      "hop_id": 3,
+      "x": 1,
+      "y": 2
+    },
+    {
+      "hop_id": 4,
+      "x": 2,
+      "y": 2
+    },
+    {
+      "hop_id": 5,
+      "x": 2,
+      "y": 1
+    },
+    {
+      "hop_id": 6,
+      "x": 2,
+      "y": 0
+    },
+    {
+      "hop_id": 7,
+      "x": 1,
+      "y": 0
+    },
+    {
+      "hop_id": 8,
+      "x": 1,
+      "y": 1
+    },
+    {
+      "hop_id": 9,
+      "x": 0,
+      "y": 1
+    }
+  ],
+  "pending_hop_ids": [],
+  "cells": [
+    {
+      "x": 1,
+      "y": 0,
+      "hop_ids": [
+        7
+      ],
+      "metal": "not_detected",
+      "voc": "missing",
+      "material": {
+        "status": "succeeded",
+        "label": "concrete",
+        "confidence": 0.94
+      },
+      "quality": "missing",
+      "flags": [
+        "missing"
+      ]
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "hop_ids": [
+        6
+      ],
+      "metal": "sensor_error",
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "concrete",
+        "confidence": 0.85
+      },
+      "quality": "complete",
+      "flags": []
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "hop_ids": [
+        1,
+        9
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.55
+      },
+      "quality": "low_confidence",
+      "flags": [
+        "low_confidence"
+      ]
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "hop_ids": [
+        8
+      ],
+      "metal": "detected",
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "mud",
+        "confidence": 0.9
+      },
+      "quality": "complete",
+      "flags": [
+        "metal"
+      ]
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "hop_ids": [
+        5
+      ],
+      "metal": "not_detected",
+      "voc": "detected",
+      "material": {
+        "status": "succeeded",
+        "label": "mud",
+        "confidence": 0.91
+      },
+      "quality": "complete",
+      "flags": [
+        "voc"
+      ]
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "hop_ids": [
+        2
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "soil",
+        "confidence": 0.91
+      },
+      "quality": "complete",
+      "flags": []
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "hop_ids": [
+        3
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected",
+      "material": {
+        "status": "succeeded",
+        "label": "gravel",
+        "confidence": 0.88
+      },
+      "quality": "conflicting",
+      "flags": [
+        "conflicting"
+      ]
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "hop_ids": [
+        4
+      ],
+      "metal": "not_detected",
+      "voc": "not_detected",
+      "material": {
+        "status": "none",
+        "label": null,
+        "confidence": null
+      },
+      "quality": "missing",
+      "flags": [
+        "missing"
+      ]
+    }
+  ]
+}
