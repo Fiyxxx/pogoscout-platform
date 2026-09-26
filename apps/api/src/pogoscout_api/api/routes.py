@@ -147,7 +147,7 @@ def get_cells(mission_id: str, session: SessionDep):
 
 @router.get("/missions/{mission_id}/risk")
 def get_risk(mission_id: str, session: SessionDep):
-    """Risk assessment: per-cell risk, hazard areas and the mission verdict (docs/API.md)."""
+    """Risk assessment: per-cell risk, hazard areas and a mission summary (docs/API.md)."""
     try:
         return readmodel.risk_json(session, mission_id)
     except DomainError as exc:

@@ -1,6 +1,6 @@
 // Mirrors docs/API.md. Keep in sync with apps/api.
 
-import type { RiskArea, Verdict } from '../lib/risk'
+import type { RiskArea } from '../lib/risk'
 
 export type MissionStatus = 'live' | 'complete' | 'aborted'
 export type HopSource = 'mock' | 'manual' | 'hardware'
@@ -157,7 +157,7 @@ export type WorldMission = {
   geo: GeoAnchor
   current: Point | null
   cells: WorldCell[]
-  risk: { verdict: Verdict; verdict_reasons: string[]; areas: WorldArea[] }
+  risk: { summary: string[]; areas: WorldArea[] }
 }
 
 export type WorldResponse = { missions: WorldMission[] }

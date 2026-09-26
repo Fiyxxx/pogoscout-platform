@@ -155,14 +155,15 @@ deciban to probability table). Deterministic and explainable: every rating carri
 - A hazard cell with P 15%+ (High or above) is a **suspected explosive hazard**; below that a
   **metal anomaly** to re-survey. **Not assessed**: no valid metal reading; never shown as safe.
 - **Hazard areas** join cells at M or above with P 15%+, up to two cells apart.
-- **Verdict**: `no_go` with any explosive area at H or EH; `caution` with an activity area, metal
-  anomalies or 5%+ of cells not assessed; else `go`.
+- **Summary**: counts of suspected explosive hazards, metal anomaly areas, recent activity areas,
+  metal anomalies to re-survey and the share of cells not assessed. There is deliberately no go or
+  no-go verdict: operators may still need to enter an area, so the platform informs the decision
+  and leaves it to them.
 
 ```jsonc
 {
   "rules_version": "risk-2",
-  "verdict": "no_go",
-  "verdict_reasons": ["7 suspected explosive hazards", "16 metal anomalies to re-survey"],
+  "summary": ["7 suspected explosive hazards", "16 metal anomalies to re-survey"],
   "coverage": {"surveyed": 1404, "assessed": 1385},
   "matrix": {"I": [13, 7, 7, 0, 19], "II": [0, 0, 0, 0, 0], "III": [2, 1, 5, 3, 15], "IV": [0, 0, 0, 0, 0]},
   "cells": [  // only cells with an indication or not assessed
@@ -173,7 +174,7 @@ deciban to probability table). Deterministic and explainable: every rating carri
   ],
   "areas": [
     {"id": "A1", "kind": "explosive", "level": "EH", "label": "Suspected explosive hazard",
-     "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+     "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
      "cells": [[10, 6], [11, 6]], "centroid": [10.44, 6.55], "peak": [10, 6], "p": 98,
      "reasons": ["Prior 2% of cells: −17 dB", "Metal 0.90: +25 dB",
                  "6 more metal detections within 2 cells: +10 dB", "9 cells in this area"]}
@@ -233,7 +234,7 @@ Every mission with a GPS anchor, newest first, for the theatre map. Missions wit
   "cells": [[3, 2, "soil", 0.82, 0.07, 0.76]],
   // [x, y, succeeded material label or null, strongest metal 0..1, strongest voc 0..1,
   //  risk heat: P(hazard), half P for an activity cue, 0 no indication, -1 not assessed]
-  "risk": {"verdict": "no_go", "verdict_reasons": [...], "areas": [RiskArea without cells, plus "size"]}
+  "risk": {"summary": [...], "areas": [RiskArea without cells, plus "size"]}
 } ] }
 ```
 `POST /replays` accepts an optional `geo`; without it the scenario's simulated start fix is used (`replay/sites.py`).

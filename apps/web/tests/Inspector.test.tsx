@@ -64,14 +64,14 @@ test('inspector shows a hazard area with its action', () => {
   const area = assessCells([strongMetal(0, 0, 1, 0.8)]).areas[0]
   renderIn(<Inspector mission={mission()} cell={null} {...riskProps} area={area} />)
   expect(screen.getByText('A1')).toBeInTheDocument()
-  expect(screen.getByText('Do not enter. Mark and bypass, and request EOD clearance.')).toBeInTheDocument()
+  expect(screen.getByText('Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Go to peak cell' })).toBeInTheDocument()
 })
 
-test('risk layer shows the verdict, matrix and areas', () => {
+test('risk layer shows the summary, matrix and areas, without a verdict', () => {
   const cells = [strongMetal(0, 0, 1, 0.8), cell(5, 5, 2)]
   render(<LayerRail layer="risk" onLayer={() => {}} cells={cells} {...railProps(cells)} />)
-  expect(screen.getByText('No-go')).toBeInTheDocument()
+  expect(screen.queryByText('No-go')).toBeNull()
   expect(screen.getByText('1 suspected explosive hazard')).toBeInTheDocument()
   expect(screen.getByRole('table', { name: 'Cells by likelihood and severity' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /Suspected explosive hazard/ })).toBeInTheDocument()

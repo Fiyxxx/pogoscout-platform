@@ -439,7 +439,7 @@ def world(session: Session) -> JSONDict:
     A cell is `[x, y, material label or null, metal signal 0..1, voc signal 0..1, risk heat]`,
     where signals are the strongest valid reading and risk heat is the posterior probability of a
     hazard (half the probability for an activity cue), 0 with no indication, -1 not assessed.
-    Each mission also carries its verdict and areas.
+    Each mission also carries its risk summary and areas.
     """
     all_missions = session.scalars(select(MissionRow).order_by(MissionRow.created_at.desc()))
     rows = [m for m in all_missions if m.geo]
@@ -465,8 +465,7 @@ def world(session: Session) -> JSONDict:
                     for c in document["cells"]
                 ],
                 "risk": {
-                    "verdict": assessment["verdict"],
-                    "verdict_reasons": assessment["verdict_reasons"],
+                    "summary": assessment["summary"],
                     "areas": [
                         {k: a[k] for k in a if k != "cells"} | {"size": len(a["cells"])}
                         for a in assessment["areas"]

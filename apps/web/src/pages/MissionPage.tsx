@@ -14,7 +14,7 @@ import { usePlayback } from '../features/dashboard/usePlayback'
 import { cellKey, type Layer } from '../lib/cells'
 import { elapsed } from '../lib/format'
 import { snapshotAt } from '../lib/history'
-import { assessCells, VERDICT_NAMES } from '../lib/risk'
+import { assessCells } from '../lib/risk'
 
 const MissionMap = lazy(() => import('../features/map/MissionMap'))
 
@@ -70,7 +70,7 @@ export function MissionPage() {
     setFocusId(id)
   }
   const selectedCell = useMemo(() => shown?.cells.find((c) => cellKey(c) === selected) ?? null, [shown, selected])
-  // Assessed from the cells on screen, so the verdict follows playback as well as the live feed.
+  // Assessed from the cells on screen, so risk follows playback as well as the live feed.
   const risk = useMemo(() => assessCells(shown?.cells ?? []), [shown])
   const riskByCell = useMemo(() => new Map(risk.cells.map((c) => [cellKey(c), c])), [risk])
   const area = risk.areas.find((a) => a.id === areaId) ?? null
@@ -132,9 +132,6 @@ export function MissionPage() {
           </span>
         </div>
         <MissionBadge mission={m} replaying={replaying} />
-        <button className="verdict verdict-btn" data-verdict={risk.verdict} title={risk.verdict_reasons.join('\n')} onClick={() => setLayer('risk')}>
-          {VERDICT_NAMES[risk.verdict]}
-        </button>
         <span className="mono" style={{ fontSize: 13 }}>
           T+{elapsed(m.started_at, replaying ? lastShown : m.last_hop_at)}
         </span>

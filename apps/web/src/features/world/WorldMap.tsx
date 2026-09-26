@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
 import type { WorldArea, WorldMission } from '../../api/types'
 import { cellBounds, cellRing, gridToLngLat } from '../../lib/geo'
 import { isMaterial, MATERIAL_COLORS } from '../../lib/materials'
-import { LEVEL_NAMES, probText, VERDICT_NAMES } from '../../lib/risk'
+import { LEVEL_NAMES, probText } from '../../lib/risk'
 
 export type HeatLayer = 'risk' | 'metal' | 'voc' | 'off'
 export type WorldLayers = { heat: HeatLayer; areas: boolean; footprints: boolean }
@@ -115,7 +115,7 @@ function signature(missions: WorldMission[]): string {
       const s = w.mission.stats
       const classified = Object.values(s.materials).reduce((a, b) => a + b, 0)
       const areas = w.risk.areas.map((a) => `${a.id}${a.level}${a.size}`).join('')
-      return `${w.mission.id}:${w.cells.length}:${s.hops}:${s.metal}:${s.voc}:${classified}:${w.risk.verdict}:${areas}`
+      return `${w.mission.id}:${w.cells.length}:${s.hops}:${s.metal}:${s.voc}:${classified}:${areas}`
     })
     .join('|')
 }
@@ -199,8 +199,8 @@ function paintMarker(el: HTMLElement, w: WorldMission, focused: boolean) {
   dot.className = live ? 'dot pulse' : 'dot'
   ;(el.querySelector('.name') as HTMLElement).textContent = w.mission.name
   const count = el.querySelector('.count') as HTMLElement
-  count.textContent = VERDICT_NAMES[w.risk.verdict]
-  count.dataset.verdict = w.risk.verdict
+  const n = w.risk.areas.length
+  count.textContent = n ? `${n} ${n === 1 ? 'area' : 'areas'}` : ''
 }
 
 /** A pulsing hotspot for a hazard area: hover previews it, a click pins the full card. */

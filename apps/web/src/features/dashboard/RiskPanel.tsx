@@ -5,12 +5,11 @@ import {
   PROBABILITY_NAMES,
   SEVERITY,
   SEVERITY_NAMES,
-  VERDICT_NAMES,
   type RiskAssessment,
   LEVEL_COLORS,
 } from '../../lib/risk'
 
-/** Verdict, the risk matrix (likelihood against severity) and the hazard areas, in the layer rail. */
+/** Summary, the risk matrix (likelihood against severity) and the hazard areas, in the layer rail. */
 export function RiskPanel({ risk, area, onArea }: { risk: RiskAssessment; area: string | null; onArea: (id: string | null) => void }) {
   const { surveyed, assessed } = risk.coverage
   return (
@@ -19,11 +18,8 @@ export function RiskPanel({ risk, area, onArea }: { risk: RiskAssessment; area: 
         <h2 className="section-title" style={{ paddingBottom: 2 }}>
           Assessment
         </h2>
-        <span className="verdict-lg" data-verdict={risk.verdict}>
-          {VERDICT_NAMES[risk.verdict]}
-        </span>
         <ul className="risk-reasons">
-          {risk.verdict_reasons.map((r) => (
+          {risk.summary.map((r) => (
             <li key={r}>{r}</li>
           ))}
         </ul>

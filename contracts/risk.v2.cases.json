@@ -275,8 +275,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "go",
-        "verdict_reasons": [
+        "summary": [
           "No indications in surveyed cells"
         ],
         "coverage": {
@@ -468,8 +467,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -530,7 +528,7 @@
             "kind": "explosive",
             "level": "EH",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 1,
@@ -705,8 +703,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -767,7 +764,7 @@
             "kind": "explosive",
             "level": "H",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 1,
@@ -942,8 +939,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "caution",
-        "verdict_reasons": [
+        "summary": [
           "1 metal anomaly to re-survey"
         ],
         "coverage": {
@@ -1156,8 +1152,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "caution",
-        "verdict_reasons": [
+        "summary": [
           "1 metal anomaly to re-survey"
         ],
         "coverage": {
@@ -1371,8 +1366,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -1434,7 +1428,7 @@
             "kind": "explosive",
             "level": "EH",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 1,
@@ -1614,8 +1608,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -1677,7 +1670,7 @@
             "kind": "explosive",
             "level": "H",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 1,
@@ -1853,8 +1846,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -1933,7 +1925,7 @@
             "kind": "explosive",
             "level": "H",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 1,
@@ -2114,8 +2106,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "caution",
-        "verdict_reasons": [
+        "summary": [
           "1 recent activity area"
         ],
         "coverage": {
@@ -2289,8 +2280,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -2384,7 +2374,7 @@
             "kind": "explosive",
             "level": "EH",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 0,
@@ -2537,8 +2527,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "2 suspected explosive hazards"
         ],
         "coverage": {
@@ -2615,7 +2604,7 @@
             "kind": "explosive",
             "level": "EH",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 6,
@@ -2641,7 +2630,7 @@
             "kind": "explosive",
             "level": "H",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 0,
@@ -2736,8 +2725,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "caution",
-        "verdict_reasons": [
+        "summary": [
           "50% of surveyed cells not assessed"
         ],
         "coverage": {
@@ -2832,8 +2820,7 @@
       ],
       "expected": {
         "rules_version": "risk-2",
-        "verdict": "no_go",
-        "verdict_reasons": [
+        "summary": [
           "1 suspected explosive hazard"
         ],
         "coverage": {
@@ -2894,7 +2881,7 @@
             "kind": "explosive",
             "level": "EH",
             "label": "Suspected explosive hazard",
-            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "action": "Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.",
             "cells": [
               [
                 0,

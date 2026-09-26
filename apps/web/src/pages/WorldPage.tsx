@@ -9,7 +9,6 @@ import { HealthLights, TopBar } from '../components/TopBar'
 import { MissionPreview } from '../features/missions/MissionPreview'
 import { NewMissionDialog } from '../features/missions/NewMissionDialog'
 import type { HeatLayer, WorldLayers } from '../features/world/WorldMap'
-import { VERDICT_NAMES } from '../lib/risk'
 import { statusView } from '../lib/status'
 
 const WorldMap = lazy(() => import('../features/world/WorldMap'))
@@ -32,7 +31,7 @@ export function WorldPage() {
   const totals = {
     live: missions.filter((w) => w.mission.status === 'live').length,
     cells: missions.reduce((a, w) => a + w.mission.stats.cells, 0),
-    noGo: missions.filter((w) => w.risk.verdict === 'no_go').length,
+    metal: missions.reduce((a, w) => a + w.mission.stats.metal, 0),
     areas: missions.reduce((a, w) => a + w.risk.areas.length, 0),
   }
 
@@ -63,7 +62,7 @@ export function WorldPage() {
           <div style={{ padding: '16px 16px 12px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, borderBottom: '1px solid var(--line)' }}>
             <Total label="Live" value={totals.live} signal={totals.live > 0} />
             <Total label="Cells" value={totals.cells.toLocaleString('en-US')} />
-            <Total label="No-go" value={totals.noGo} signal={totals.noGo > 0} />
+            <Total label="Metal" value={totals.metal} signal={totals.metal > 0} />
             <Total label="Hazard areas" value={totals.areas} />
           </div>
           <h2 className="section-title" style={{ padding: '14px 16px 6px' }}>
@@ -173,9 +172,11 @@ function MissionRow({ w, active, onClick }: { w: WorldMission; active: boolean; 
           {w.mission.stats.cells.toLocaleString('en-US')} cells
         </span>
       </span>
-      <span className="verdict" data-verdict={w.risk.verdict} data-inverted={active}>
-        {VERDICT_NAMES[w.risk.verdict]}
-      </span>
+      {w.risk.areas.length > 0 && (
+        <span className="mono" style={{ fontSize: 13, color: active ? 'var(--bg)' : 'var(--signal)' }} title="Hazard areas">
+          {w.risk.areas.length}
+        </span>
+      )}
     </button>
   )
 }

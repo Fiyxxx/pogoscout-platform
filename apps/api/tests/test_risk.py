@@ -79,14 +79,13 @@ def test_unknown_is_never_safe() -> None:
     result = risk.assess([failed, cell(1, 0)])
     [unassessed] = [c for c in result.cells if not c.assessed]
     assert unassessed.reasons == ["Metal sensor error"]
-    assert result.verdict == "caution"
-    assert "50% of surveyed cells not assessed" in result.verdict_reasons
+    assert "50% of surveyed cells not assessed" in result.summary
 
 
 def test_weak_readings_never_form_an_area() -> None:
     result = risk.assess([cell(0, 0, metal=(0.4,)), cell(1, 0, metal=(0.45,))])
     assert result.areas == []
-    assert result.verdict_reasons == ["2 metal anomalies to re-survey"]
+    assert result.summary == ["2 metal anomalies to re-survey"]
 
 
 def test_areas_join_cells_up_to_two_apart() -> None:
@@ -106,7 +105,8 @@ def test_risk_endpoint(client, mission) -> None:
     client.put(f"/api/v1/missions/{mission}/hops/2", json=hop("F", voc=(0.3, "ok")))
     body = client.get(f"/api/v1/missions/{mission}/risk").json()
     assert body["rules_version"] == "risk-2"
-    assert body["verdict"] == "no_go"
+    assert "verdict" not in body
+    assert body["summary"] == ["1 suspected explosive hazard"]
     assert body["coverage"] == {"surveyed": 2, "assessed": 2}
     [area] = body["areas"]
     assert area["label"] == "Suspected explosive hazard"

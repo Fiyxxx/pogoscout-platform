@@ -1,4 +1,4 @@
-"""Risk assessment: sensor readings -> per-cell risk, hazard areas and a mission verdict.
+"""Risk assessment: sensor readings -> per-cell risk, hazard areas and a mission summary.
 
 Rules `risk-2`: Bayesian evidence fusion. The same rules run in the web client
 (`apps/web/src/lib/risk.ts`); both are checked against `contracts/risk.v2.cases.json`.
@@ -43,7 +43,6 @@ RULES_VERSION = "risk-2"
 
 Kind = Literal["explosive", "activity"]
 Level = Literal["EH", "H", "M", "L"]
-Verdict = Literal["go", "caution", "no_go"]
 
 SIGNAL = 30  # below this a reading is background
 DETECTED = 50  # a reading at or above this is a detection
@@ -126,8 +125,7 @@ class Area:
 
 @dataclass(frozen=True)
 class Assessment:
-    verdict: Verdict
-    verdict_reasons: list[str]
+    summary: list[str]
     surveyed: int
     assessed: int
     matrix: dict[str, list[int]]
@@ -246,8 +244,12 @@ def assess_cell(
     return CellRisk(x, y, True, kind, db, p, letter, severity, level, label, reasons)
 
 
+SEVERE_ACTION = (
+    "Mark the area and bypass where possible. If passage is needed, use a cleared lane or "
+    "request EOD."
+)
 ACTIONS = {
-    ("explosive", True): "Do not enter. Mark and bypass, and request EOD clearance.",
+    ("explosive", True): SEVERE_ACTION,
     ("explosive", False): "Re-survey with the Route clearance loadout before use.",
     ("activity", False): "Approach with caution and observe. A cue, not a detection.",
 }
@@ -339,23 +341,16 @@ def assess(cells: Iterable[CellReadings]) -> Assessment:
         reasons.append(_plural(loose, "metal anomaly", "metal anomalies") + " to re-survey")
     if missing:
         reasons.append(f"{missing_pct}% of surveyed cells not assessed")
-    if severe:
-        verdict: Verdict = "no_go"
-    elif anomalies or activity or loose or missing_pct >= 5:
-        verdict = "caution"
-    else:
-        verdict = "go"
     if not reasons:
         reasons.append("No indications in surveyed cells")
-    return Assessment(verdict, reasons, surveyed, assessed, matrix, risks, areas)
+    return Assessment(reasons, surveyed, assessed, matrix, risks, areas)
 
 
 def to_json(assessment: Assessment) -> dict:
     """Wire form shared with the web client and the contract test cases."""
     return {
         "rules_version": RULES_VERSION,
-        "verdict": assessment.verdict,
-        "verdict_reasons": assessment.verdict_reasons,
+        "summary": assessment.summary,
         "coverage": {"surveyed": assessment.surveyed, "assessed": assessment.assessed},
         "matrix": assessment.matrix,
         "cells": [

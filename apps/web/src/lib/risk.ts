@@ -7,7 +7,6 @@ import type { Cell, SensorReading } from '../api/types'
 
 export type RiskKind = 'explosive' | 'activity'
 export type RiskLevel = 'EH' | 'H' | 'M' | 'L'
-export type Verdict = 'go' | 'caution' | 'no_go'
 
 export type CellRisk = {
   x: number
@@ -41,8 +40,8 @@ export type RiskArea = {
 
 export type RiskAssessment = {
   rules_version: string
-  verdict: Verdict
-  verdict_reasons: string[]
+  /** Plain counts for the operator. No go or no-go: they may still need to enter an area. */
+  summary: string[]
   coverage: { surveyed: number; assessed: number }
   matrix: Record<string, number[]>
   cells: CellRisk[]
@@ -69,7 +68,6 @@ export const MATRIX: Record<string, RiskLevel[]> = {
 export const RANK: Record<RiskLevel, number> = { EH: 4, H: 3, M: 2, L: 1 }
 export const LEVEL_NAMES: Record<RiskLevel, string> = { EH: 'Extremely high', H: 'High', M: 'Medium', L: 'Low' }
 export const LEVEL_COLORS: Record<RiskLevel, string> = { EH: 'var(--risk-eh)', H: 'var(--risk-h)', M: 'var(--risk-m)', L: '#4a4a46' }
-export const VERDICT_NAMES: Record<Verdict, string> = { go: 'Go', caution: 'Caution', no_go: 'No-go' }
 const AREA_LEVELS: RiskLevel[] = ['EH', 'H', 'M']
 
 // Priors [share of cells, decibans] and sensor models [lowest signal, P | hypothesis, P | not, dB].
@@ -191,7 +189,7 @@ function assessCell(cell: CellReadings, metalMax: Map<string, number>, vocMax: M
 }
 
 const ACTIONS = {
-  severe: 'Do not enter. Mark and bypass, and request EOD clearance.',
+  severe: 'Mark the area and bypass where possible. If passage is needed, use a cleared lane or request EOD.',
   anomaly: 'Re-survey with the Route clearance loadout before use.',
   activity: 'Approach with caution and observe. A cue, not a detection.',
 }
@@ -281,13 +279,11 @@ export function assess(input: CellReadings[]): RiskAssessment {
   if (activity) reasons.push(plural(activity, 'recent activity area', 'recent activity areas'))
   if (loose) reasons.push(`${plural(loose, 'metal anomaly', 'metal anomalies')} to re-survey`)
   if (missing) reasons.push(`${missingPct}% of surveyed cells not assessed`)
-  const verdict: Verdict = severe ? 'no_go' : anomalies || activity || loose || missingPct >= 5 ? 'caution' : 'go'
   if (!reasons.length) reasons.push('No indications in surveyed cells')
 
   return {
     rules_version: RULES_VERSION,
-    verdict,
-    verdict_reasons: reasons,
+    summary: reasons,
     coverage: { surveyed, assessed },
     matrix,
     cells: risks.filter((r) => r.kind !== null || !r.assessed),
