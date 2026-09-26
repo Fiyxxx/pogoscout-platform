@@ -6,7 +6,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
-import { DEFAULT_VARIANTS, PARTS, type PartId, type SlotId } from './parts'
+import { BAYS, DEFAULT_VARIANTS, EMPTY, PARTS, type PartId, type SlotId } from './parts'
 
 const PAPER = 0xf4f4f1
 const INK = 0x151515
@@ -184,6 +184,11 @@ export class ModelScene {
     if (part) part.swap = { t: 0, next: variant, built: false }
   }
 
+  /** Refits every bay to the given modules, animating only the bays that change. */
+  setVariants(variants: Record<SlotId, string>) {
+    for (const bay of BAYS) this.setVariant(bay.id, variants[bay.id])
+  }
+
   hop() {
     this.setExploded(false)
     this.hopStart = this.clock.getElapsedTime()
@@ -214,7 +219,7 @@ export class ModelScene {
   private newPart(id: PartId): PartBuild {
     const group = new THREE.Group()
     group.userData.part = id
-    if (id !== 'leg' && id !== 'metal') group.position.y = LIFT
+    if (id !== 'leg' && id !== 'metal' && id !== 'seismic') group.position.y = LIFT
     this.root.add(group)
     const index = PARTS.findIndex((p) => p.id === id)
     const el = document.createElement('div')
@@ -411,8 +416,8 @@ export class ModelScene {
     pack.add(this.solid(battery, box(0.06, 0.03, 0.04), [-0.44, 1.54, 0.22]))
     this.piece(battery, pack, [0, 1.0, -0.6])
 
-    // Module slots
-    for (const slot of ['camera', 'metal', 'gas', 'datalink'] as SlotId[]) this.buildSlot(slot)
+    // Sensor bays
+    for (const bay of BAYS) this.buildSlot(bay.id)
   }
 
   private slotExplode: Record<SlotId, THREE.Vector3Tuple> = {
@@ -420,39 +425,62 @@ export class ModelScene {
     metal: [-1.25, -0.35, 0],
     gas: [1.25, 0.05, 0],
     datalink: [-0.55, 1.0, -0.55],
+    lidar: [-0.35, -0.55, -1.2],
+    environment: [-1.3, 0.3, 0.35],
+    acoustic: [0.6, 1.0, 0.6],
+    seismic: [1.0, -0.9, -0.6],
+    radiation: [0.55, -0.15, -1.3],
+    rf: [0.95, 0.8, -0.8],
   }
 
   private buildSlot(slot: SlotId) {
     const part = this.parts.get(slot) ?? this.newPart(slot)
     for (const p of part.pieces) part.group.remove(p.obj)
     part.pieces = []
-    const g = new THREE.Group()
-    const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d)
-    const cyl = (r: number, h: number, seg = 14) => new THREE.CylinderGeometry(r, r, h, seg)
     const v = this.variants[slot]
     if (slot === 'metal') part.group.position.y = v === 'magnetometer' ? LIFT : 0
+    if (v !== EMPTY) {
+      const g = new THREE.Group()
+      this.drawModule(part, slot, v, g)
+      this.piece(part, g, this.slotExplode[slot])
+    }
+    this.paint()
+  }
+
+  /** Draws the fitted module of a bay, each on its own mount. */
+  private drawModule(part: PartBuild, slot: SlotId, v: string, g: THREE.Group) {
+    const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d)
+    const cyl = (r: number, h: number, seg = 14) => new THREE.CylinderGeometry(r, r, h, seg)
+    const line = (...pts: THREE.Vector3Tuple[]) => this.polyline(part, pts.map((q) => new THREE.Vector3(...q)))
 
     if (slot === 'camera') {
       g.position.set(0, 0.95, 0.52)
       g.add(this.solid(part, box(0.36, 0.03, 0.08), [0, 0.1, -0.02]))
       for (const s of [-1, 1]) g.add(this.screw(part, [s * 0.13, 0.117, -0.02]))
-      if (v === 'rgb') {
+      if (v === 'rgb' || v === 'nir') {
         g.add(this.solid(part, prism(roundedRect(0.3, 0.24, 0.03), 0.18), [0, 0, 0]))
         g.add(this.solid(part, cyl(0.08, 0.04, 18), [0, -0.11, 0.02], [0, 0, 0], 1))
         g.add(this.solid(part, cyl(0.065, 0.05, 18), [0, -0.15, 0.02], [0, 0, 0], 1))
         g.add(this.circle(part, 0.04, -0.176, 24, 0, 0.02))
         g.add(this.solid(part, cyl(0.012, 0.01, 8), [0.1, -0.09, -0.07], [0, 0, 0], 1))
+        // The near-infrared version carries a band-pass filter ring over the lens.
+        if (v === 'nir') {
+          g.add(this.solid(part, cyl(0.075, 0.02, 18), [0, -0.185, 0.02], [0, 0, 0], 1))
+          g.add(this.circle(part, 0.055, -0.196, 24, 0, 0.02))
+        }
       } else if (v === 'thermal') {
         g.add(this.solid(part, prism(roundedRect(0.34, 0.3, 0.03), 0.2), [0, 0, 0]))
         g.add(this.solid(part, box(0.18, 0.05, 0.18), [0, -0.125, 0.02]))
         g.add(this.outline(part, [[-0.06, -0.151, -0.04], [0.06, -0.151, -0.04], [0.06, -0.151, 0.08], [-0.06, -0.151, 0.08]]))
         for (const x of [-0.12, -0.06, 0, 0.06, 0.12]) g.add(this.solid(part, box(0.012, 0.07, 0.26), [x, 0.135, 0]))
       } else {
-        g.add(this.solid(part, prism(roundedRect(0.42, 0.32, 0.03), 0.16), [0, 0, 0]))
-        for (const [x, z] of [[-0.1, -0.07], [0.1, -0.07], [-0.1, 0.09], [0.1, 0.09]]) {
-          g.add(this.solid(part, cyl(0.05, 0.05, 14), [x, -0.1, z], [0, 0, 0], 1))
-          g.add(this.circle(part, 0.03, -0.126, 16, x, z))
+        // Stereo depth: a long bar with two imagers and the projector between them.
+        g.add(this.solid(part, prism(roundedRect(0.44, 0.14, 0.05), 0.12), [0, 0.02, 0.02]))
+        for (const x of [-0.14, 0.14]) {
+          g.add(this.solid(part, cyl(0.04, 0.04, 16), [x, -0.06, 0.02], [0, 0, 0], 1))
+          g.add(this.circle(part, 0.025, -0.081, 16, x, 0.02))
         }
+        g.add(this.outline(part, [[-0.03, -0.041, -0.01], [0.03, -0.041, -0.01], [0.03, -0.041, 0.05], [-0.03, -0.041, 0.05]]))
       }
     } else if (slot === 'metal') {
       if (v === 'coil') {
@@ -463,15 +491,24 @@ export class ModelScene {
           g.add(this.solid(part, box(0.29, 0.02, 0.04), [Math.cos(b) * 0.25, 0.25, Math.sin(b) * 0.25], [0, -b, 0]))
         }
         g.add(this.solid(part, box(0.18, 0.04, 0.12), [0.24, 0.3, 0.14]))
-        g.add(this.polyline(part, [new THREE.Vector3(0.24, 0.32, 0.2), new THREE.Vector3(0.2, 0.5, 0.18), new THREE.Vector3(0.12, 0.7, 0.12)]))
+        g.add(line([0.24, 0.32, 0.2], [0.2, 0.5, 0.18], [0.12, 0.7, 0.12]))
       } else if (v === 'magnetometer') {
         g.add(this.solid(part, box(0.06, 0.06, 1.1), [-0.62, 1.06, 0.62], [0, Math.PI / 4, 0]))
         for (const d of [0.35, 0.75]) g.add(this.solid(part, box(0.09, 0.09, 0.03), [-d * 0.707 - 0.24, 1.06, d * 0.707 + 0.24], [0, Math.PI / 4, 0]))
         g.add(this.solid(part, cyl(0.07, 0.26, 16), [-1.02, 1.06, 1.02], [Math.PI / 2, 0, Math.PI / 4], 1))
         g.add(this.solid(part, cyl(0.05, 0.04, 16), [-1.12, 1.06, 1.12], [Math.PI / 2, 0, Math.PI / 4], 1))
+        g.add(this.solid(part, cyl(0.07, 0.26, 16), [-0.46, 1.06, 0.46], [Math.PI / 2, 0, Math.PI / 4], 1))
       } else {
+        // Double-D pad: two D-shaped windings overlapping down the middle of a flat pad.
         g.add(this.solid(part, prism(roundedRect(0.92, 0.64, 0.06), 0.045), [0, 0.2, 0]))
-        for (const x of [-0.3, -0.1, 0.1, 0.3]) g.add(this.outline(part, [[x - 0.05, 0.2235, -0.24], [x + 0.05, 0.2235, -0.24], [x + 0.05, 0.2235, 0.24], [x - 0.05, 0.2235, 0.24]]))
+        for (const s of [-1, 1]) {
+          const pts: THREE.Vector3Tuple[] = []
+          for (let i = 0; i <= 16; i++) {
+            const a = -Math.PI / 2 + (i / 16) * Math.PI
+            pts.push([s * (-0.04 + Math.cos(a) * 0.36), 0.2235, Math.sin(a) * 0.26])
+          }
+          g.add(line(...pts, pts[0]))
+        }
         g.add(this.solid(part, box(0.2, 0.06, 0.14), [0.32, 0.25, -0.22]))
         for (const [x, z] of [[-0.42, -0.28], [0.42, -0.28], [-0.42, 0.28], [0.42, 0.28]]) g.add(this.screw(part, [x, 0.226, z]))
       }
@@ -485,8 +522,15 @@ export class ModelScene {
         g.add(this.solid(part, cyl(0.1, 0.05, 18), [0, 0.155, 0], [0, 0, 0], 1))
         for (let k = 0; k < 6; k++) {
           const b = (k / 6) * Math.PI
-          g.add(this.polyline(part, [new THREE.Vector3(Math.cos(b) * 0.09, 0.181, Math.sin(b) * 0.09), new THREE.Vector3(-Math.cos(b) * 0.09, 0.181, -Math.sin(b) * 0.09)]))
+          g.add(line([Math.cos(b) * 0.09, 0.181, Math.sin(b) * 0.09], [-Math.cos(b) * 0.09, 0.181, -Math.sin(b) * 0.09]))
         }
+      } else if (v === 'pid') {
+        // Photoionisation: a slim sensor can in a pumped sample housing with an inlet nozzle.
+        g.add(this.solid(part, box(0.2, 0.26, 0.2), [0, 0, 0]))
+        g.add(this.solid(part, cyl(0.1, 0.1, 18), [0, 0.18, 0], [0, 0, 0], 1))
+        g.add(this.circle(part, 0.06, 0.231, 20))
+        g.add(this.solid(part, cyl(0.02, 0.12, 8), [0.16, -0.06, 0], [0, 0, Math.PI / 2], 1))
+        g.add(this.outline(part, [[-0.06, -0.08, 0.101], [0.06, -0.08, 0.101], [0.06, 0.06, 0.101], [-0.06, 0.06, 0.101]]))
       } else if (v === 'co2') {
         g.add(this.solid(part, cyl(0.09, 0.5, 18), [0.02, 0, 0], [Math.PI / 2, 0, 0], 1))
         for (const z of [-0.26, 0.26]) g.add(this.solid(part, cyl(0.1, 0.04, 18), [0.02, 0, z], [Math.PI / 2, 0, 0], 1))
@@ -499,7 +543,7 @@ export class ModelScene {
         }
         g.add(this.outline(part, [[0.111, -0.08, -0.12], [0.111, -0.08, 0.12], [0.111, -0.04, 0.12], [0.111, -0.04, -0.12]]))
       }
-    } else {
+    } else if (slot === 'datalink') {
       g.position.set(-0.42, 1.52, -0.42)
       g.add(this.solid(part, cyl(0.06, 0.02, 14), [0, 0.01, 0], [0, 0, 0], 1))
       g.add(this.solid(part, cyl(0.03, 0.06, 6), [0, 0.05, 0], [0, 0, 0], 1))
@@ -507,6 +551,12 @@ export class ModelScene {
         g.add(this.solid(part, cyl(0.02, 0.5, 8), [0, 0.33, 0], [0, 0, 0], 1))
         g.add(this.solid(part, cyl(0.03, 0.08, 10), [0, 0.12, 0], [0, 0, 0], 1))
         g.add(this.solid(part, new THREE.IcosahedronGeometry(0.085, 0), [0, 0.63, 0], [0, 0, 0], 1))
+      } else if (v === 'hd') {
+        // Digital VTX: finned box with a stubby patch antenna.
+        g.add(this.solid(part, box(0.2, 0.08, 0.2), [0, 0.12, 0]))
+        for (const x of [-0.06, 0, 0.06]) g.add(this.solid(part, box(0.012, 0.04, 0.18), [x, 0.18, 0]))
+        g.add(this.solid(part, cyl(0.02, 0.2, 8), [0.06, 0.3, 0.06], [0, 0, 0], 1))
+        g.add(this.solid(part, prism(roundedRect(0.14, 0.14, 0.03), 0.03), [0.06, 0.41, 0.06]))
       } else if (v === 'mesh') {
         g.add(this.solid(part, box(0.34, 0.04, 0.1), [0, 0.1, 0]))
         g.add(this.solid(part, cyl(0.02, 0.6, 8), [-0.13, 0.42, 0], [0, 0, 0], 1))
@@ -517,9 +567,117 @@ export class ModelScene {
         g.add(this.outline(part, [[-0.07, 0.15, 0.031], [0.07, 0.15, 0.031], [0.07, 0.36, 0.031], [-0.07, 0.36, 0.031]]))
         g.add(this.solid(part, box(0.12, 0.05, 0.12), [0, 0.06, 0]))
       }
+    } else if (slot === 'lidar') {
+      // Under the core, behind the leg, looking down.
+      g.position.set(-0.26, 0.95, -0.44)
+      g.add(this.solid(part, box(0.3, 0.03, 0.22), [0, 0.1, 0]))
+      for (const s of [-1, 1]) g.add(this.screw(part, [s * 0.11, 0.117, 0]))
+      if (v === 'tfluna') {
+        g.add(this.solid(part, box(0.2, 0.1, 0.12), [0, 0.03, 0]))
+        for (const x of [-0.05, 0.05]) {
+          g.add(this.solid(part, cyl(0.035, 0.03, 16), [x, -0.035, 0], [0, 0, 0], 1))
+          g.add(this.circle(part, 0.022, -0.051, 16, x, 0))
+        }
+      } else if (v === 'multizone') {
+        g.add(this.solid(part, box(0.18, 0.02, 0.16), [0, 0.07, 0]))
+        g.add(this.solid(part, box(0.07, 0.03, 0.045), [0, 0.045, 0]))
+        for (const x of [-0.018, 0.018]) g.add(this.circle(part, 0.009, 0.029, 10, x, 0))
+        for (const [x, z] of [[-0.07, -0.06], [0.07, -0.06], [-0.07, 0.06], [0.07, 0.06]]) g.add(this.circle(part, 0.01, 0.059, 8, x, z))
+      } else {
+        // Mid-360: square base with a wraparound window, hung upside down.
+        g.add(this.solid(part, prism(roundedRect(0.3, 0.3, 0.04), 0.1), [0, 0.035, 0]))
+        g.add(this.solid(part, cyl(0.13, 0.12, 24), [0, -0.075, 0], [0, 0, 0], 1))
+        for (const y of [-0.05, -0.1]) g.add(this.circle(part, 0.132, y, 32))
+        g.add(this.solid(part, cyl(0.1, 0.02, 24), [0, -0.145, 0], [0, 0, 0], 1))
+      }
+    } else if (slot === 'environment') {
+      // Left side of the core, mirroring the gas bay.
+      g.position.set(-0.8, 1.2, 0)
+      g.add(this.solid(part, box(0.04, 0.2, 0.2), [0.13, 0, 0]))
+      for (const y of [-0.06, 0.06]) g.add(this.screw(part, [0.105, y, 0.06], 'x', 0.016))
+      if (v === 'sht45') {
+        // Louvred radiation shield: stacked plates around a central post.
+        g.add(this.solid(part, box(0.14, 0.03, 0.04), [0.05, 0.14, 0]))
+        g.add(this.solid(part, cyl(0.015, 0.34, 8), [-0.05, 0, 0], [0, 0, 0], 1))
+        for (let k = 0; k < 6; k++) g.add(this.solid(part, cyl(0.11 - (k === 0 ? 0 : 0.01), 0.015, 20), [-0.05, 0.14 - k * 0.055, 0], [0, 0, 0], 1))
+      } else if (v === 'bme280') {
+        g.add(this.solid(part, box(0.14, 0.2, 0.18), [0, 0, 0]))
+        for (const z of [-0.05, 0, 0.05]) g.add(this.outline(part, [[-0.071, -0.07, z - 0.012], [-0.071, -0.07, z + 0.012], [-0.071, 0.07, z + 0.012], [-0.071, 0.07, z - 0.012]]))
+      } else {
+        // Particle counter: fan-driven box with inlet and outlet.
+        g.add(this.solid(part, box(0.18, 0.2, 0.3), [-0.02, 0, 0]))
+        g.add(this.outline(part, [[-0.111, -0.05, -0.12], [-0.111, -0.05, -0.04], [-0.111, 0.05, -0.04], [-0.111, 0.05, -0.12]]))
+        g.add(this.circle(part, 0.045, 0.101, 18, -0.02, 0.07))
+        g.add(this.outline(part, [[-0.111, -0.06, 0.03], [-0.111, -0.06, 0.12], [-0.111, -0.03, 0.12], [-0.111, -0.03, 0.03]]))
+      }
+    } else if (slot === 'acoustic') {
+      // Front-right of the lid, clear of the rotors' downwash as far as the frame allows.
+      g.position.set(0.42, 1.52, 0.42)
+      g.add(this.solid(part, cyl(0.06, 0.02, 14), [0, 0.01, 0], [0, 0, 0], 1))
+      if (v === 'mic') {
+        g.add(this.solid(part, cyl(0.015, 0.22, 8), [0, 0.13, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, new THREE.IcosahedronGeometry(0.08, 1), [0, 0.3, 0], [0, 0, 0], 12))
+      } else if (v === 'array') {
+        g.add(this.solid(part, cyl(0.015, 0.1, 8), [0, 0.07, 0], [0, 0, 0], 1))
+        for (const a of [Math.PI / 4, -Math.PI / 4]) g.add(this.solid(part, box(0.44, 0.02, 0.05), [0, 0.13, 0], [0, a, 0]))
+        for (let k = 0; k < 4; k++) {
+          const a = (k / 4) * Math.PI * 2
+          g.add(this.solid(part, cyl(0.03, 0.03, 12), [Math.cos(a) * 0.2, 0.155, Math.sin(a) * 0.2], [0, 0, 0], 1))
+          g.add(this.circle(part, 0.012, 0.171, 10, Math.cos(a) * 0.2, Math.sin(a) * 0.2))
+        }
+      } else {
+        g.add(this.solid(part, box(0.12, 0.05, 0.12), [0, 0.045, 0]))
+        g.add(this.circle(part, 0.02, 0.071, 12))
+      }
+    } else if (slot === 'seismic') {
+      // Clamped to the rod just above the ball foot, so it meets the ground on every landing.
+      g.position.set(0, 0.3, 0)
+      const a = -0.75
+      const dx = Math.cos(a)
+      const dz = Math.sin(a)
+      g.add(this.solid(part, cyl(0.05, 0.035, 14), [0, 0, 0], [0, 0, 0], 1))
+      g.add(this.solid(part, box(0.16, 0.02, 0.04), [dx * 0.12, 0, dz * 0.12], [0, -a, 0]))
+      if (v === 'geophone') {
+        g.add(this.solid(part, cyl(0.05, 0.12, 16), [dx * 0.22, -0.02, dz * 0.22], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.055, 0.02, 16), [dx * 0.22, 0.05, dz * 0.22], [0, 0, 0], 1))
+        g.add(line([dx * 0.22, 0.06, dz * 0.22], [dx * 0.2, 0.2, dz * 0.2], [dx * 0.1, 0.34, dz * 0.1]))
+      } else {
+        g.add(this.solid(part, box(0.12, 0.02, 0.1), [dx * 0.22, 0, dz * 0.22], [0, -a, 0]))
+        g.add(this.solid(part, box(0.05, 0.015, 0.05), [dx * 0.22, 0.017, dz * 0.22], [0, -a, 0]))
+      }
+    } else if (slot === 'radiation') {
+      // Back face of the core, beside the connector.
+      g.position.set(0.4, 1.2, -0.8)
+      g.add(this.solid(part, box(0.2, 0.2, 0.04), [0, 0, 0.13]))
+      for (const x of [-0.06, 0.06]) g.add(this.screw(part, [x, 0.06, 0.105], 'z', 0.016))
+      if (v === 'bg51') {
+        g.add(this.solid(part, box(0.18, 0.14, 0.02), [0, -0.02, 0.09]))
+        g.add(this.outline(part, [[-0.03, -0.05, 0.079], [0.03, -0.05, 0.079], [0.03, 0.01, 0.079], [-0.03, 0.01, 0.079]]))
+      } else if (v === 'sigma') {
+        g.add(this.solid(part, cyl(0.075, 0.36, 20), [0, 0, 0.02], [0, 0, Math.PI / 2], 1))
+        for (const x of [-0.12, 0.12]) g.add(this.solid(part, cyl(0.082, 0.03, 20), [x, 0, 0.02], [0, 0, Math.PI / 2], 1))
+        g.add(this.solid(part, cyl(0.03, 0.05, 10), [0.2, 0, 0.02], [0, 0, Math.PI / 2], 1))
+      } else {
+        g.add(this.solid(part, prism(roundedRect(0.26, 0.12, 0.02), 0.12), [0, 0, 0.03]))
+        g.add(this.solid(part, box(0.04, 0.05, 0.05), [0.15, 0, 0.03]))
+        g.add(this.outline(part, [[-0.1, -0.03, -0.031], [-0.02, -0.03, -0.031], [-0.02, 0.03, -0.031], [-0.1, 0.03, -0.031]]))
+      }
+    } else {
+      // Radio receiver: back-right of the lid.
+      g.position.set(0.44, 1.52, -0.44)
+      if (v === 'rtlsdr') {
+        g.add(this.solid(part, prism(roundedRect(0.1, 0.26, 0.02), 0.05), [0, 0.025, 0]))
+        g.add(this.solid(part, cyl(0.022, 0.05, 8), [0, 0.025, -0.15], [Math.PI / 2, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.012, 0.44, 8), [0, 0.24, -0.17], [0, 0, 0], 1))
+      } else {
+        g.add(this.solid(part, box(0.24, 0.035, 0.18), [0, 0.02, 0]))
+        g.add(this.solid(part, box(0.1, 0.02, 0.08), [-0.03, 0.047, 0.02]))
+        for (const x of [-0.09, 0.09]) {
+          g.add(this.solid(part, cyl(0.02, 0.04, 8), [x, 0.057, -0.07], [0, 0, 0], 1))
+          g.add(this.solid(part, cyl(0.013, 0.36, 8), [x, 0.255, -0.07], [0, 0, 0], 1))
+        }
+      }
     }
-    this.piece(part, g, this.slotExplode[slot])
-    this.paint()
   }
 
   // Interaction ---------------------------------------------------------------------------------
@@ -606,15 +764,17 @@ export class ModelScene {
       const bounds = new THREE.Box3().setFromObject(part.group)
       const centre = bounds.getCenter(new THREE.Vector3())
       part.label.position.copy(centre).add(new THREE.Vector3(0, bounds.getSize(new THREE.Vector3()).y / 2 + 0.18, 0))
-      const opacity = String(k > 0.6 ? (this.selected && part.id !== this.selected ? 0.35 : 1) : 0)
+      const empty = part.pieces.length === 0
+      const opacity = String(k > 0.6 && !empty ? (this.selected && part.id !== this.selected ? 0.35 : 1) : 0)
       if (part.label.element.style.opacity !== opacity) part.label.element.style.opacity = opacity
     }
 
     // Glide the camera focus towards the chosen part.
     // Keep the whole drone in frame, leaning towards the chosen part.
     const home = new THREE.Vector3(0, 1.4 + this.root.position.y * 0.5, 0)
-    const goal = this.selected
-      ? home.lerp(new THREE.Box3().setFromObject(this.parts.get(this.selected)!.group).getCenter(new THREE.Vector3()), 0.6)
+    const chosen = this.selected ? this.parts.get(this.selected) : undefined
+    const goal = chosen && chosen.pieces.length
+      ? home.lerp(new THREE.Box3().setFromObject(chosen.group).getCenter(new THREE.Vector3()), 0.6)
       : home
     this.controls.target.lerp(goal, 0.07)
     const offset = this.camera.position.clone().sub(this.controls.target)
