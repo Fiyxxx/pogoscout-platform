@@ -16,8 +16,9 @@ Body `{"name": str, "source": "mock"|"manual"|"hardware" = "mock", "mission_id"?
 
 ```jsonc
 // GeoAnchor: GPS fix of cell (0, 0). +y points along heading_deg (clockwise from true north),
-// +x is 90 degrees clockwise from it, and one cell is cell_m metres on the ground.
-{ "lat": 1.3571, "lon": 103.7362, "heading_deg": 20.0, "cell_m": 2.0 }
+// +x is 90 degrees clockwise from it. One cell is 1 m x 1 m on the ground for every mission:
+// cell_m is optional on input, always 1.0 in responses, and any other value is rejected (422).
+{ "lat": 1.3571, "lon": 103.7362, "heading_deg": 20.0, "cell_m": 1.0 }
 ```
 
 ### `GET /missions` → `MissionSummary[]` (newest first)

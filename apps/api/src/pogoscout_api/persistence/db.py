@@ -24,7 +24,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.types import TypeDecorator
 
-from pogoscout_api.domain.geo import GeoAnchor
+from pogoscout_api.domain.geo import CELL_M, GeoAnchor
 
 
 def utcnow() -> datetime:
@@ -77,7 +77,8 @@ class MissionRow(Base):
             lat=self.geo_lat,
             lon=self.geo_lon,
             heading_deg=self.geo_heading_deg or 0.0,
-            cell_m=self.geo_cell_m or 1.0,
+            # Missions stored before the cell size was fixed read back at the fixed size.
+            cell_m=CELL_M,
         )
 
     def set_geo(self, geo: "GeoAnchor | None") -> None:

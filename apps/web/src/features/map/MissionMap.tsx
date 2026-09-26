@@ -136,7 +136,7 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
         </button>
       </div>
       <span className="mono" style={{ position: 'absolute', left: 20, bottom: 16, fontSize: 11, color: 'var(--faint)', pointerEvents: 'none' }}>
-        1 cell = 1 hop = {CELL_M} × {CELL_M} m · area {footprintM(data.bounds).join(' × ')} m
+        1 cell = 1 hop = {CELL_M} × {CELL_M} m{data.cells.length > 0 && ` · area ${footprintM(data.bounds).join(' × ')} m`}
       </span>
     </div>
   )

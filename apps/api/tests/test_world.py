@@ -7,7 +7,7 @@ def test_missions_without_a_fix_stay_off_the_theatre(client, mission) -> None:
 
 
 def test_world_lists_anchored_missions_with_compact_cells(client) -> None:
-    geo = {"lat": 1.3571, "lon": 103.7362, "heading_deg": 20.0, "cell_m": 2.0}
+    geo = {"lat": 1.3571, "lon": 103.7362, "heading_deg": 20.0, "cell_m": 1.0}
     created = client.post("/api/v1/missions", json={"name": "Fix", "mission_id": "g1", "geo": geo})
     assert created.json()["geo"] == geo
     client.put("/api/v1/missions/g1/hops/1", json=hop("F", metal=(1, "ok")))
@@ -28,10 +28,18 @@ def test_world_lists_anchored_missions_with_compact_cells(client) -> None:
 def test_replays_default_to_their_scenario_site(client) -> None:
     body = {"scenario_id": "park_connector_v1", "mission_id": "p1"}
     summary = client.post("/api/v1/replays", json=body).json()
-    assert summary["geo"]["lat"] == 1.3406 and summary["geo"]["cell_m"] == 2.0
+    assert summary["geo"]["lat"] == 1.3406 and summary["geo"]["cell_m"] == 1.0
 
 
 def test_invalid_anchor_is_rejected(client) -> None:
     geo = {"lat": 95, "lon": 103.7, "heading_deg": 0, "cell_m": 2}
     body = {"name": "Bad", "geo": geo}
     assert client.post("/api/v1/missions", json=body).status_code == 422
+
+
+def test_cell_size_is_fixed_for_every_mission(client) -> None:
+    geo = {"lat": 1.3571, "lon": 103.7362, "heading_deg": 20.0}
+    created = client.post("/api/v1/missions", json={"name": "Fix", "geo": geo}).json()
+    assert created["geo"]["cell_m"] == 1.0
+    bad = {**geo, "cell_m": 2.0}
+    assert client.post("/api/v1/missions", json={"name": "Bad", "geo": bad}).status_code == 422
