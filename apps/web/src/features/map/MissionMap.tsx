@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CellsResponse } from '../../api/types'
 import type { Layer } from '../../lib/cells'
+import { CELL_M, footprintM } from '../../lib/geo'
 import { MissionScene, type HeightMetric, type ViewMode } from './scene'
 
 type Props = {
@@ -135,7 +136,7 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
         </button>
       </div>
       <span className="mono" style={{ position: 'absolute', left: 20, bottom: 16, fontSize: 11, color: 'var(--faint)', pointerEvents: 'none' }}>
-        1 cell = 1 hop
+        1 cell = 1 hop = {CELL_M} × {CELL_M} m · area {footprintM(data.bounds).join(' × ')} m
       </span>
     </div>
   )

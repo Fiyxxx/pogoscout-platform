@@ -50,6 +50,7 @@ export function ModelPage() {
   const part = PARTS.find((p) => p.id === selected)
   const bay = bayOf(selected)
   const fittedModule = bay?.modules.find((m) => m.id === variants[bay.id])
+  const loadout = LOADOUTS.find((l) => BAYS.every((b) => variants[b.id] === l.variants[b.id]))
   const fitted = BAYS.filter((b) => variants[b.id] !== EMPTY).length
 
   return (
@@ -79,15 +80,15 @@ export function ModelPage() {
             Sensors ride on the pogo leg. One mount and connector per bay, swapped in the field without tools.
           </p>
           <div className="model-loadouts" role="group" aria-label="Loadout">
-            {LOADOUTS.map((l) => {
-              const on = BAYS.every((b) => variants[b.id] === l.variants[b.id])
-              return (
-                <button key={l.id} aria-pressed={on} title={l.summary} onClick={() => refit({ ...l.variants })}>
-                  {l.name}
-                </button>
-              )
-            })}
+            {LOADOUTS.map((l) => (
+              <button key={l.id} aria-pressed={l.id === loadout?.id} onClick={() => refit({ ...l.variants })}>
+                {l.name}
+              </button>
+            ))}
           </div>
+          <p style={{ margin: '0 20px 4px', fontSize: 12, color: loadout ? 'var(--m-ink)' : 'var(--m-muted)', lineHeight: 1.5 }}>
+            {loadout ? loadout.summary : 'Custom payload.'}
+          </p>
           {MOUNTS.map((mount) => (
             <div key={mount.id} style={{ padding: '0 8px', display: 'flex', flexDirection: 'column' }}>
               <div className="model-zone">{mount.name}</div>

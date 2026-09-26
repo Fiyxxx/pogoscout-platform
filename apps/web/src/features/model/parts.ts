@@ -207,9 +207,8 @@ export const partNumber = (id: PartId) => String(PARTS.findIndex((p) => p.id ===
 
 /** Mission loadouts. The scout never carries every bay at once: each loadout fits what a job needs. */
 export const LOADOUTS: { id: string; name: string; summary: string; variants: Record<SlotId, string> }[] = [
-  { id: 'standard', name: 'Standard', summary: 'Camera, metal coil, VOC sensor and video link.', variants: DEFAULT_VARIANTS },
-  { id: 'route', name: 'Route clearance', summary: 'Wide metal pad, ground-height lidar and a vibration sensor in the foot.', variants: { ...DEFAULT_VARIANTS, metal: 'ddcoil', lidar: 'multizone', seismic: 'accel' } },
-  { id: 'drain', name: 'Drain and culvert', summary: 'Confined-space gas, humidity, 3D lidar, thermal camera and a mesh link to relay out.', variants: { ...DEFAULT_VARIANTS, camera: 'thermal', gas: 'multigas', lidar: 'mid360', environment: 'sht45', datalink: 'mesh' } },
-  { id: 'cbrn', name: 'CBRN survey', summary: 'Isotope identifier, photoionisation detector and weather sensor.', variants: { ...DEFAULT_VARIANTS, radiation: 'gr1', gas: 'pid', environment: 'bme280' } },
-  { id: 'listen', name: 'Listening post', summary: 'Microphone array, geophone and full-band radio receiver.', variants: { ...DEFAULT_VARIANTS, acoustic: 'array', seismic: 'geophone', rf: 'b205' } },
+  { id: 'standard', name: 'Standard', summary: 'Colour camera, metal coil, VOC sensor and video link. Maps ground material, metal and VOC cues on every hop.', variants: DEFAULT_VARIANTS },
+  { id: 'route', name: 'Route clearance', summary: 'Checks a path for buried metal and disturbed ground. Wide double-D metal pad, near-infrared camera for freshly dug soil, and multizone lidar for holes and mounds.', variants: { ...DEFAULT_VARIANTS, metal: 'ddcoil', camera: 'nir', lidar: 'multizone' } },
+  { id: 'tunnel', name: 'Tunnels and drains', summary: 'Enclosed spaces with no light or signal. Thermal camera and 3D lidar to see in the dark, toxic gas and oxygen cells, humidity, and a mesh radio to relay out.', variants: { ...DEFAULT_VARIANTS, camera: 'thermal', lidar: 'mid360', gas: 'multigas', environment: 'sht45', datalink: 'mesh' } },
+  { id: 'hazard', name: 'Chemical and radiation', summary: 'Maps chemical and radiation hazards before people go in. Isotope identifier, high-sensitivity VOC detector, and a weather sensor to correct the gas readings.', variants: { ...DEFAULT_VARIANTS, radiation: 'gr1', gas: 'pid', environment: 'bme280' } },
 ]

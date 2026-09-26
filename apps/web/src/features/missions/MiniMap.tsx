@@ -6,6 +6,7 @@ export type MiniMapData = {
   cells: { x: number; y: number; metal: string; material: { status: string; label: string | null } }[]
 }
 import { cellKey } from '../../lib/cells'
+import { CELL_M, footprintM, scaleBarM } from '../../lib/geo'
 import { isMaterial, MATERIAL_COLORS } from '../../lib/materials'
 
 /** Flat material map of a mission, for previews. Highlights one cell when given. */
@@ -26,6 +27,10 @@ export function MiniMap({ data, width, height, highlight, maxCell = 34 }: { data
   const dot = Math.max(4, Math.min(8, size * 1.5))
   const ox = Math.round((width - cols * size) / 2)
   const oy = Math.round((height - rows * size) / 2)
+  // Cells are drawn to fit the box, so a metre scale bar says how big the ground really is.
+  const pxPerM = size / CELL_M
+  const bar = scaleBarM(pxPerM, Math.min(96, width / 3))
+  const [wide, long] = footprintM(data.bounds)
 
   return (
     <div style={{ position: 'relative', width, height, overflow: 'hidden' }} aria-hidden="true">
@@ -44,6 +49,15 @@ export function MiniMap({ data, width, height, highlight, maxCell = 34 }: { data
           </span>
         )
       })}
+      <span className="mono" style={{ position: 'absolute', right: 8, top: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, fontSize: 10, color: 'var(--muted)' }}>
+        <span>
+          {wide} × {long} m
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: bar * pxPerM, height: 4, borderLeft: '1px solid currentColor', borderRight: '1px solid currentColor', borderBottom: '1px solid currentColor' }} />
+          {bar} m
+        </span>
+      </span>
     </div>
   )
 }

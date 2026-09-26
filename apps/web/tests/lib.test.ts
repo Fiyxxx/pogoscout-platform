@@ -76,3 +76,22 @@ describe('history', () => {
     expect(snapshotAt(data, 4).cells.find((c) => c.y === 1)!.metal).toBe('detected')
   })
 })
+
+describe('geo scale', () => {
+  test('one cell is one metre on the ground', async () => {
+    const { CELL_M, cellRing, footprintM } = await import('../src/lib/geo')
+    expect(CELL_M).toBe(1)
+    const geo = { lat: 1.35, lon: 103.8, heading_deg: 0, cell_m: 1 }
+    const [sw, se] = cellRing(geo, 0, 0)
+    const metres = (se[0] - sw[0]) * 111_320 * Math.cos((1.35 * Math.PI) / 180)
+    expect(metres).toBeCloseTo(1, 6)
+    expect(footprintM({ min_x: 0, max_x: 48, min_y: 0, max_y: 39 })).toEqual([49, 40])
+  })
+
+  test('scale bar picks the longest round length that fits', async () => {
+    const { scaleBarM } = await import('../src/lib/geo')
+    expect(scaleBarM(2.4, 80)).toBe(20)
+    expect(scaleBarM(34, 80)).toBe(2)
+    expect(scaleBarM(0.5, 80)).toBe(100)
+  })
+})
