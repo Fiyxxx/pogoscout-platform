@@ -53,7 +53,13 @@ Body `{"status": "live"|"complete"|"aborted", "status_note"?: str}` → `Mission
 ## Hops
 
 ### `PUT /missions/{mission_id}/hops/{hop_id}`
-Body `HopPayload` (see `contracts/hop.v1.schema.json`). 201 created, 200 identical duplicate, 409 same identity different content.
+Body `HopPayload` (see `contracts/hop.v2.schema.json`). 201 created, 200 identical duplicate, 409 same identity different content.
+
+Sensor values (`schema_version` "2.0") are **signal strength from 0 to 1** against the calibrated
+background: 0 is a clean negative, 1 the strongest signal. They are not probabilities. A missing or
+failed reading is `value: null` with status `missing` or `error`. Schema "1.0" producers send 0 or 1,
+which are valid 2.0 values. A cell's `metal`/`voc` state is `detected` when any valid reading is 0.50
+or above, `not_detected` when there are valid readings below that.
 
 ### `GET /missions/{mission_id}/hops` → `HopRecord[]` ordered by hop_id
 ```jsonc
@@ -102,7 +108,7 @@ Body `HopPayload` (see `contracts/hop.v1.schema.json`). 201 created, 200 identic
 {
   "hop_id": 21, "observed_at": "...",
   "movement": {"command": "B", "dx": 0, "dy": -1},
-  "metal": {"value": 1, "status": "ok"}, "voc": {"value": 0, "status": "ok"},
+  "metal": {"value": 0.82, "status": "ok"}, "voc": {"value": 0.07, "status": "ok"},
   "image": ImageRecord | null,
   "classification": Classification,       // latest for this hop
   "classification_history": [Classification]  // all results for this hop, oldest first
@@ -116,6 +122,50 @@ Body `HopPayload` (see `contracts/hop.v1.schema.json`). 201 created, 200 identic
 }
 ```
 Quality rules (first match wins): `conflicting` if a conflicting duplicate was rejected for any hop in the cell; `failed` if latest classification failed/unavailable; `missing` if any visit has metal or voc status `missing` or no image; `pending` if classification queued/retrying; `low_confidence` if latest confidence < 0.80; else `complete`.
+
+## Risk assessment
+
+### `GET /missions/{mission_id}/risk` → `RiskAssessment`
+Rules `risk-1` (`apps/api/src/pogoscout_api/domain/risk.py`, ported line for line to
+`apps/web/src/lib/risk.ts`; both run `contracts/risk.v1.cases.json`). Deterministic and explainable:
+every rated cell and area carries the reasons behind it.
+
+- **Evidence score** (hundredths, 0 to 100): the strongest valid metal reading, +10 when a detection
+  (0.50+) is confirmed on every visit, -10 when some visits read nothing, +10 when VOC at detection
+  strength reads at or beside the cell, +10 when two or more other metal detections lie within two
+  cells. A cell with VOC and no metal is scored on its VOC signal. Only detection-strength readings
+  corroborate.
+- **Likelihood** from the score: 90+ A Frequent, 75+ B Likely, 60+ C Occasional, 50+ D Seldom, else
+  E Unlikely.
+- **Severity**: metal is a suspected explosive hazard (I Catastrophic); VOC alone is a recent
+  activity cue (III Moderate). Sensors report signal strength, so nothing names a mine or a person.
+- **Level** from the Army risk matrix (ATP 5-19): EH extremely high, H high, M medium, L low.
+- **Not assessed**: a cell with no valid metal reading. Unknown is never shown as safe.
+- **Hazard areas**: cells at M or above with a score of 50+, joined when up to two cells apart.
+  Weak readings stay single cells to re-survey.
+- **Verdict**: `no_go` with any explosive area at H or EH; `caution` with a metal anomaly area, an
+  activity area, weak metal readings or 5%+ of cells not assessed; else `go`.
+
+```jsonc
+{
+  "rules_version": "risk-1",
+  "verdict": "no_go",
+  "verdict_reasons": ["6 suspected explosive hazards", "19 weak metal readings to re-survey"],
+  "coverage": {"surveyed": 1404, "assessed": 1385},
+  "matrix": {"I": [13, 7, 7, 0, 19], "II": [0, 0, 0, 0, 0], "III": [2, 1, 5, 3, 15], "IV": [0, 0, 0, 0, 0]},
+  "cells": [  // only cells with an indication or not assessed
+    {"x": 10, "y": 6, "assessed": true, "kind": "explosive", "score": 100, "probability": "A",
+     "severity": "I", "level": "EH", "label": "Suspected explosive hazard",
+     "reasons": ["Metal signal 0.90", "6 more metal hits within 2 cells"]}
+  ],
+  "areas": [
+    {"id": "A1", "kind": "explosive", "level": "EH", "label": "Suspected explosive hazard",
+     "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+     "cells": [[10, 6], [11, 6]], "centroid": [10.44, 6.55], "peak": [10, 6], "score": 100,
+     "reasons": ["Metal signal 0.90", "6 more metal hits within 2 cells", "9 cells in this area"]}
+  ]
+}
+```
 
 ## Events
 
@@ -166,7 +216,10 @@ Every mission with a GPS anchor, newest first, for the theatre map. Missions wit
   "mission": MissionSummary,
   "geo": GeoAnchor,
   "current": {"x": 3, "y": 1} | null,
-  "cells": [[3, 2, "soil", 1, 0]]   // [x, y, succeeded material label or null, metal detected 0|1, voc detected 0|1]
+  "cells": [[3, 2, "soil", 0.82, 0.07, 4]],
+  // [x, y, succeeded material label or null, strongest metal 0..1, strongest voc 0..1,
+  //  risk rank: 0 none, 1 low, 2 medium, 3 high, 4 extremely high, -1 not assessed]
+  "risk": {"verdict": "no_go", "verdict_reasons": [...], "areas": [RiskArea without cells, plus "size"]}
 } ] }
 ```
 `POST /replays` accepts an optional `geo`; without it the scenario's simulated start fix is used (`replay/sites.py`).

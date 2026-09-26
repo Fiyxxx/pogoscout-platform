@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { Cell, CellsResponse } from '../../api/types'
 import { cellKey, isLowConfidence, latestObservation, type Layer } from '../../lib/cells'
+import { strongest } from '../../lib/risk'
 import { isMaterial, MATERIALS, type Material } from '../../lib/materials'
 import { materialTexture, rng } from './textures'
 
@@ -79,13 +80,21 @@ const DETAILS: Partial<Record<Material, DetailSpec>> = {
   soil: { n: 22, geo: () => new THREE.DodecahedronGeometry(0.022, 0), colors: [0x7a3f25, 0x6e3620, 0x9c5a36], y: 0.008, tilt: 3, scale: [0.6, 1.4] },
 }
 
-function flatColor(cell: Cell, layer: Layer): number {
+/** Risk layer colours: extremely high, high, medium, low, not assessed (U), no indication. */
+const RISK_COLORS: Record<string, number> = { EH: 0xff3a14, H: 0xff7a2e, M: 0xe0a526, L: 0x4a4a46, U: 0x34353c }
+const BASE = new THREE.Color(0x1c1c1b)
+const mix = new THREE.Color()
+
+function flatColor(cell: Cell, layer: Layer, risk: string | undefined): number {
+  if (layer === 'risk') return risk ? RISK_COLORS[risk] : 0x1c1c1b
   if (layer === 'metal' || layer === 'voc') {
     const sensor = layer === 'metal' ? cell.metal : cell.voc
-    if (sensor === 'detected') return layer === 'metal' ? SIGNAL : 0xd9d9d4
     if (sensor === 'sensor_error') return 0x5a2410
     if (sensor === 'missing') return 0x121211
-    return 0x1c1c1b
+    // Graded by signal strength: background stays dark, detections reach full colour.
+    const value = strongest(cell, layer) ?? 0
+    const t = Math.min(1, Math.max(0, (value - 0.1) / 0.6))
+    return mix.copy(BASE).lerp(new THREE.Color(layer === 'metal' ? SIGNAL : 0xd9d9d4), t).getHex()
   }
   switch (cell.quality) {
     case 'complete': return 0x2c3a2f
@@ -104,7 +113,7 @@ function groupOf(cell: Cell): Group {
 
 function signatureOf(cell: Cell): string {
   const c = cell.material
-  return [c.status, c.label, c.confidence, cell.metal, cell.voc, cell.quality, latestObservation(cell)?.image?.sha256 ?? ''].join('|')
+  return [c.status, c.label, c.confidence, cell.metal, cell.voc, strongest(cell, 'metal'), strongest(cell, 'voc'), cell.quality, latestObservation(cell)?.image?.sha256 ?? ''].join('|')
 }
 
 type CellState = {
@@ -196,6 +205,10 @@ export class MissionScene {
   private sun: THREE.DirectionalLight
   private options: SceneOptions = { layer: 'combined', view: '3d', metric: 'none', selected: null }
   private current = { x: 0, y: 0 }
+  private risk = new Map<string, string>()
+  private projected = new THREE.Vector3()
+  /** Called after every rendered frame, e.g. to move HTML overlays with the camera. */
+  onFrame: (() => void) | null = null
   private target = new THREE.Vector3()
   private targetGoal = new THREE.Vector3()
   private autoFrame = true
@@ -328,6 +341,22 @@ export class MissionScene {
     this.frameBounds(data)
   }
 
+  /** Risk level per cell key (EH, H, M, L, or U for not assessed) for the risk layer. */
+  setRisk(levels: Map<string, string>) {
+    this.risk = levels
+    if (this.options.layer === 'risk') this.paintFlat()
+  }
+
+  /** Where a grid point sits on screen, in CSS pixels from the canvas top left. */
+  project(x: number, y: number): { left: number; top: number; visible: boolean } {
+    const s = this.states.get(cellKey({ x: Math.round(x), y: Math.round(y) }))
+    const h = s ? s.height * s.appear : REST_HEIGHT
+    const v = this.projected.set(x, h + 0.02, -y).project(this.camera)
+    const w = this.canvas.clientWidth
+    const hgt = this.canvas.clientHeight
+    return { left: ((v.x + 1) / 2) * w, top: ((1 - v.y) / 2) * hgt, visible: v.z < 1 && Math.abs(v.x) <= 1.05 && Math.abs(v.y) <= 1.05 }
+  }
+
   /** Returns the key of the cell under a viewport point, if any. */
   pick(clientX: number, clientY: number): string | null {
     const rect = this.canvas.getBoundingClientRect()
@@ -433,7 +462,7 @@ export class MissionScene {
 
   private paintFlat() {
     const color = new THREE.Color()
-    this.flat.keys.forEach((key, i) => this.flat.mesh.setColorAt(i, color.setHex(flatColor(this.states.get(key)!.cell, this.options.layer))))
+    this.flat.keys.forEach((key, i) => this.flat.mesh.setColorAt(i, color.setHex(flatColor(this.states.get(key)!.cell, this.options.layer, this.risk.get(key)))))
     if (this.flat.mesh.instanceColor) this.flat.mesh.instanceColor.needsUpdate = true
   }
 
@@ -668,5 +697,6 @@ export class MissionScene {
     this.camera.position.set(tg.x + c.r * Math.sin(c.phi) * Math.sin(c.theta), c.r * Math.cos(c.phi), tg.z + c.r * Math.sin(c.phi) * Math.cos(c.theta))
     this.camera.lookAt(tg)
     this.renderer.render(this.scene, this.camera)
+    this.onFrame?.()
   }
 }

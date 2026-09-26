@@ -12,6 +12,7 @@ import httpx
 from sqlalchemy.engine import make_url
 
 from pogoscout_api.config import settings
+from pogoscout_api.domain import risk_cases
 from pogoscout_api.domain.hops import HopPayload
 from pogoscout_api.domain.materials import MATERIAL_LABELS, TAXONOMY_VERSION
 from pogoscout_api.replay.builders import BUILDERS
@@ -29,11 +30,13 @@ def generate_fixtures(names: list[str]) -> None:
 def export_contracts() -> None:
     CONTRACTS_DIR.mkdir(exist_ok=True)
     schema = HopPayload.model_json_schema()
-    (CONTRACTS_DIR / "hop.v1.schema.json").write_text(json.dumps(schema, indent=2) + "\n")
+    (CONTRACTS_DIR / "hop.v2.schema.json").write_text(json.dumps(schema, indent=2) + "\n")
     taxonomy = {"taxonomy_version": TAXONOMY_VERSION, "labels": list(MATERIAL_LABELS)}
     (CONTRACTS_DIR / f"taxonomy.{TAXONOMY_VERSION}.json").write_text(
         json.dumps(taxonomy, indent=2) + "\n"
     )
+    cases = risk_cases.build()
+    (CONTRACTS_DIR / "risk.v1.cases.json").write_text(json.dumps(cases, indent=2) + "\n")
     print(f"wrote contracts to {CONTRACTS_DIR}")
 
 

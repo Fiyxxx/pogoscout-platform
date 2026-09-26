@@ -35,9 +35,31 @@ IMAGE_DELAY_MS = 600
 LOW_CONFIDENCE = 0.80
 FLAG_ORDER = ("metal", "voc", "low_confidence", "pending", "failed", "missing", "conflicting")
 
-Reading = tuple[int | None, str]
+Reading = tuple[float | None, str]
+# Fixture intent: OK1 is a real anomaly, OK0 a clean reading. `payload` turns them into graded
+# signal strengths (schema 2.0) the way a calibrated sensor would report them.
 OK0: Reading = (0, "ok")
 OK1: Reading = (1, "ok")
+OKW: Reading = (0.4, "ok")  # a weak reading: clutter strength, below detection
+DETECTED = 0.5
+# Share of clean readings that pick up low-level clutter (harmless scrap, soil minerals, fumes).
+CLUTTER = {"metal": 0.012, "voc": 0.008}
+
+
+def graded(reading: Reading, key: str, sensor: str) -> float | None:
+    """Deterministic signal strength for a fixture reading: background, clutter or a clear hit."""
+    value, status = reading
+    if status != "ok" or value is None:
+        return None
+    rng = random.Random(f"{key}:{sensor}")
+    u = rng.random()
+    if value >= DETECTED:
+        return round(0.55 + 0.4 * u, 2)
+    if value > 0:
+        return round(0.32 + 0.16 * u, 2)
+    if rng.random() < CLUTTER[sensor]:
+        return round(0.30 + 0.16 * u, 2)
+    return round(0.02 + 0.14 * u, 2)
 
 
 def render_mock_image(
@@ -91,9 +113,10 @@ def _timestamp(ms: int) -> str:
 
 
 def _sensor_state(readings: list[Reading]) -> str:
-    if any(r == OK1 for r in readings):
+    ok = [value for value, status in readings if status == "ok" and value is not None]
+    if any(value >= DETECTED for value in ok):
         return "detected"
-    if any(r == OK0 for r in readings):
+    if ok:
         return "not_detected"
     if any(status == "error" for _, status in readings):
         return "sensor_error"
@@ -114,15 +137,16 @@ class FixtureBuilder:
 
     def payload(self, command: str, observed_ms: int, metal: Reading, voc: Reading) -> dict:
         dx, dy = MOVEMENT_VECTORS[command]
+        key = f"{self.scenario_id}:{observed_ms}"
         return {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "observed_at": _timestamp(observed_ms),
             "producer_id": "mock-generator",
             "source": "mock",
             "movement": {"command": command, "dx": dx, "dy": dy},
             "sensors": {
-                "metal": {"value": metal[0], "status": metal[1]},
-                "voc": {"value": voc[0], "status": voc[1]},
+                "metal": {"value": graded(metal, key, "metal"), "status": metal[1]},
+                "voc": {"value": graded(voc, key, "voc"), "status": voc[1]},
             },
         }
 

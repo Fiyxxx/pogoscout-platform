@@ -14,7 +14,7 @@
       "at_ms": 0,
       "hop_id": 1,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:00Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -25,11 +25,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.03,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.07,
             "status": "ok"
           }
         }
@@ -50,7 +50,7 @@
       "at_ms": 4000,
       "hop_id": 2,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:04Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -61,11 +61,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.05,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.05,
             "status": "ok"
           }
         }
@@ -86,7 +86,7 @@
       "at_ms": 5200,
       "hop_id": 2,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:04Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -97,11 +97,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.05,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.05,
             "status": "ok"
           }
         }
@@ -113,7 +113,7 @@
       "at_ms": 8000,
       "hop_id": 3,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:08Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -124,11 +124,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.12,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.11,
             "status": "ok"
           }
         }
@@ -149,7 +149,7 @@
       "at_ms": 9200,
       "hop_id": 3,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:08Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -160,11 +160,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 1,
+            "value": 0.84,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.11,
             "status": "ok"
           }
         }
@@ -176,7 +176,7 @@
       "at_ms": 12000,
       "hop_id": 4,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:12Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -187,11 +187,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.05,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.02,
             "status": "ok"
           }
         }
@@ -203,7 +203,7 @@
       "at_ms": 16000,
       "hop_id": 5,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:16Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -214,11 +214,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.09,
             "status": "ok"
           },
           "voc": {
-            "value": 1,
+            "value": 0.87,
             "status": "ok"
           }
         }
@@ -230,7 +230,7 @@
       "at_ms": 20000,
       "hop_id": 6,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:20Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -245,7 +245,7 @@
             "status": "error"
           },
           "voc": {
-            "value": 0,
+            "value": 0.05,
             "status": "ok"
           }
         }
@@ -266,7 +266,7 @@
       "at_ms": 24000,
       "hop_id": 7,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:24Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -277,7 +277,7 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.15,
             "status": "ok"
           },
           "voc": {
@@ -311,7 +311,7 @@
       "at_ms": 32000,
       "hop_id": 9,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:32Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -322,11 +322,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 0,
+            "value": 0.04,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.15,
             "status": "ok"
           }
         }
@@ -347,7 +347,7 @@
       "at_ms": 33000,
       "hop_id": 8,
       "payload": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "observed_at": "2026-09-25T08:00:28Z",
         "producer_id": "mock-generator",
         "source": "mock",
@@ -358,11 +358,11 @@
         },
         "sensors": {
           "metal": {
-            "value": 1,
+            "value": 0.69,
             "status": "ok"
           },
           "voc": {
-            "value": 0,
+            "value": 0.04,
             "status": "ok"
           }
         }

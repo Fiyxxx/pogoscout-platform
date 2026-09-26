@@ -14,6 +14,7 @@ import { usePlayback } from '../features/dashboard/usePlayback'
 import { cellKey, type Layer } from '../lib/cells'
 import { elapsed } from '../lib/format'
 import { snapshotAt } from '../lib/history'
+import { assessCells, VERDICT_NAMES } from '../lib/risk'
 
 const MissionMap = lazy(() => import('../features/map/MissionMap'))
 
@@ -50,8 +51,16 @@ export function MissionPage() {
   const [picked, setPicked] = useState<string | null>(null)
   const current = shown && shown.path.length ? cellKey(shown.current) : null
   const selected = picked ?? current
-  const select = (key: string) => setPicked(key === current ? null : key)
+  const [areaId, setAreaId] = useState<string | null>(null)
+  const select = (key: string) => {
+    setAreaId(null)
+    setPicked(key === current ? null : key)
+  }
   const selectedCell = useMemo(() => shown?.cells.find((c) => cellKey(c) === selected) ?? null, [shown, selected])
+  // Assessed from the cells on screen, so the verdict follows playback as well as the live feed.
+  const risk = useMemo(() => assessCells(shown?.cells ?? []), [shown])
+  const riskByCell = useMemo(() => new Map(risk.cells.map((c) => [cellKey(c), c])), [risk])
+  const area = risk.areas.find((a) => a.id === areaId) ?? null
 
   useEffect(() => {
     if (mission.data) document.title = `${mission.data.name} - PogoScout`
@@ -90,23 +99,36 @@ export function MissionPage() {
           </span>
         </div>
         <MissionBadge mission={m} replaying={replaying} />
+        <button className="verdict verdict-btn" data-verdict={risk.verdict} title={risk.verdict_reasons.join('\n')} onClick={() => setLayer('risk')}>
+          {VERDICT_NAMES[risk.verdict]}
+        </button>
         <span className="mono" style={{ fontSize: 13 }}>
           T+{elapsed(m.started_at, replaying ? lastShown : m.last_hop_at)}
         </span>
       </TopBar>
 
       <div style={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
-        <LayerRail layer={layer} onLayer={setLayer} cells={shown.cells} />
+        <LayerRail layer={layer} onLayer={setLayer} cells={shown.cells} risk={risk} area={areaId} onArea={setAreaId} />
         <main style={{ flexGrow: 1, minWidth: 0, position: 'relative' }}>
           {full.cells.length === 0 ? (
             <div className="empty">Waiting for the first hop</div>
           ) : (
             <Suspense fallback={<div className="empty">Loading map</div>}>
-              <MissionMap data={shown} layer={layer} selected={selected} onSelect={select} />
+              <MissionMap data={shown} layer={layer} selected={selected} onSelect={select} risk={risk} area={areaId} onArea={setAreaId} />
             </Suspense>
           )}
         </main>
-        <Inspector mission={m} cell={selectedCell} />
+        <Inspector
+          mission={m}
+          cell={selectedCell}
+          cellRisk={selectedCell ? riskByCell.get(cellKey(selectedCell)) : undefined}
+          area={area}
+          onCloseArea={() => setAreaId(null)}
+          onPeak={(key) => {
+            setAreaId(null)
+            setPicked(key)
+          }}
+        />
       </div>
 
       <Footer full={full} times={times} events={events.data ?? []} playback={playback} onSelect={select} />

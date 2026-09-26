@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from pogoscout_api.api.schemas import MissionStats, MissionSummary
 from pogoscout_api.application.missions import get_mission
+from pogoscout_api.domain import risk as risk_rules
 from pogoscout_api.domain.projection import aggregate_sensor_values, place
 from pogoscout_api.domain.quality import (
     NO_CLASSIFICATION,
@@ -97,6 +98,7 @@ class _Entry:
     fingerprint: Fingerprint
     stats: StatsView
     cells: bytes | None = None
+    risk: JSONDict | None = None
 
 
 class ReadCache:
@@ -239,8 +241,8 @@ def build(snapshot: Snapshot, *, with_cells: bool) -> tuple[StatsView, JSONDict 
         visits: list[VisitFact] = []
         observations: list[JSONDict] = []
         latest: dict[int, JSONDict] = {}
-        metal_readings: list[tuple[int | None, str]] = []
-        voc_readings: list[tuple[int | None, str]] = []
+        metal_readings: list[tuple[float | None, str]] = []
+        voc_readings: list[tuple[float | None, str]] = []
         for hop_id in hop_ids:
             payload = hops[hop_id]
             metal = payload["sensors"]["metal"]
@@ -365,6 +367,32 @@ def cells_json(session: Session, mission_id: str) -> bytes:
     return body
 
 
+def _readings(document: JSONDict) -> list[risk_rules.CellReadings]:
+    return [
+        risk_rules.CellReadings(
+            x=c["x"],
+            y=c["y"],
+            metal=[(o["metal"]["value"], o["metal"]["status"]) for o in c["observations"]],
+            voc=[(o["voc"]["value"], o["voc"]["status"]) for o in c["observations"]],
+        )
+        for c in document["cells"]
+    ]
+
+
+def risk_json(session: Session, mission_id: str) -> JSONDict:
+    """Risk assessment for a mission (rules in `domain.risk`), cached with the cells document."""
+    body = cells_json(session, mission_id)
+    cache = cache_for(session)
+    fingerprint = fingerprints(session, [mission_id])[mission_id]
+    entry = cache.get(mission_id, fingerprint)
+    if entry is not None and entry.risk is not None:
+        return entry.risk
+    document = risk_rules.to_json(risk_rules.assess(_readings(json.loads(body))))
+    if entry is not None and entry.cells is body:
+        entry.risk = document
+    return document
+
+
 def _summary(mission: MissionRow, view: StatsView) -> MissionSummary:
     return MissionSummary(
         id=mission.id,
@@ -408,7 +436,9 @@ _world_cache: dict[str, tuple[Fingerprint, JSONDict]] = {}
 def world(session: Session) -> JSONDict:
     """Every GPS-anchored mission with its compact cells, for the theatre map.
 
-    A cell is `[x, y, material label or null, metal detected 0|1, voc detected 0|1]`.
+    A cell is `[x, y, material label or null, metal signal 0..1, voc signal 0..1, risk rank]`,
+    where signals are the strongest valid reading and the risk rank is 0 none, 1 low, 2 medium,
+    3 high, 4 extremely high, -1 not assessed. Each mission also carries its verdict and areas.
     """
     all_missions = session.scalars(select(MissionRow).order_by(MissionRow.created_at.desc()))
     rows = [m for m in all_missions if m.geo]
@@ -418,6 +448,11 @@ def world(session: Session) -> JSONDict:
         cached = _world_cache.get(mission.id)
         if cached is None or cached[0] != prints[mission.id]:
             document = json.loads(cells_json(session, mission.id))
+            assessment = risk_json(session, mission.id)
+            ranks = {
+                (r["x"], r["y"]): risk_rules.RANK[r["level"]] if r["assessed"] else -1
+                for r in assessment["cells"]
+            }
             compact = {
                 "current": document["current"] if document["path"] else None,
                 "cells": [
@@ -425,11 +460,20 @@ def world(session: Session) -> JSONDict:
                         c["x"],
                         c["y"],
                         c["material"]["label"] if c["material"]["status"] == "succeeded" else None,
-                        int(c["metal"] == "detected"),
-                        int(c["voc"] == "detected"),
+                        _strongest(c, "metal"),
+                        _strongest(c, "voc"),
+                        ranks.get((c["x"], c["y"]), 0),
                     ]
                     for c in document["cells"]
                 ],
+                "risk": {
+                    "verdict": assessment["verdict"],
+                    "verdict_reasons": assessment["verdict_reasons"],
+                    "areas": [
+                        {k: a[k] for k in a if k != "cells"} | {"size": len(a["cells"])}
+                        for a in assessment["areas"]
+                    ],
+                },
             }
             cached = (prints[mission.id], compact)
             _world_cache[mission.id] = cached
@@ -441,3 +485,12 @@ def world(session: Session) -> JSONDict:
             }
         )
     return {"missions": items}
+
+
+def _strongest(cell: JSONDict, sensor: str) -> float:
+    values = [
+        o[sensor]["value"]
+        for o in cell["observations"]
+        if o[sensor]["status"] == "ok" and o[sensor]["value"] is not None
+    ]
+    return risk_rules.hundredths(max(values)) / 100 if values else 0

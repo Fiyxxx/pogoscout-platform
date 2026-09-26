@@ -1,15 +1,18 @@
 """Hop payload contract and validation rules.
 
 A hop is one completed movement of exactly one grid cell plus the observation taken on landing.
-`0` is a valid negative reading; missing or failed readings carry `value: null` and a status.
+
+Schema 2.0: a sensor value is a signal strength from 0 to 1 against the calibrated background
+(0 is a clean negative, 1 the strongest signal). It is not a probability. Schema 1.0 producers send
+0 or 1, which are valid 2.0 values. Missing or failed readings carry `value: null` and a status.
 """
 
 import hashlib
 import json
 from datetime import datetime
-from typing import Literal, Self
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MovementCommand = Literal["F", "B", "L", "R"]
 SensorStatus = Literal["ok", "missing", "error"]
@@ -43,14 +46,24 @@ class Movement(StrictModel):
         return self
 
 
+SignalStrength = Annotated[float, Field(ge=0.0, le=1.0, allow_inf_nan=False)]
+
+
 class SensorReading(StrictModel):
-    value: Literal[0, 1] | None
+    value: SignalStrength | None
     status: SensorStatus
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def not_boolean(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError("value must be a number from 0 to 1, not a boolean")
+        return value
 
     @model_validator(mode="after")
     def value_matches_status(self) -> Self:
         if self.status == "ok" and self.value is None:
-            raise ValueError("status 'ok' requires value 0 or 1")
+            raise ValueError("status 'ok' requires a value from 0 to 1")
         if self.status != "ok" and self.value is not None:
             raise ValueError(f"status '{self.status}' requires value null")
         return self
@@ -62,7 +75,7 @@ class Sensors(StrictModel):
 
 
 class HopPayload(StrictModel):
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.0", "2.0"]
     observed_at: datetime
     producer_id: str
     source: HopSource

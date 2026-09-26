@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from pogoscout_api.application import positions
-from pogoscout_api.domain.projection import PlacedHop
+from pogoscout_api.domain.projection import DETECTED, PlacedHop
 from pogoscout_api.persistence.db import EventRow, utcnow
 
 LEVELS: dict[str, str] = {
@@ -68,7 +68,7 @@ def record_placement(session: Session, mission_id: str, hop: PlacedHop) -> None:
         (sensors.metal, "Metal", "metal_detected", f"Metal anomaly at {where}"),
         (sensors.voc, "VOC", "voc_detected", f"VOC cue at {where}"),
     ):
-        if reading.status == "ok" and reading.value == 1:
+        if reading.status == "ok" and reading.value is not None and reading.value >= DETECTED:
             record(session, mission_id, detected_kind, detected_msg, **kw)
         elif reading.status == "error":
             record(session, mission_id, "sensor_error", f"{name} sensor error at {where}", **kw)

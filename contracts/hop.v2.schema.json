@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "Movement": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "enum": [
+            "F",
+            "B",
+            "L",
+            "R"
+          ],
+          "title": "Command",
+          "type": "string"
+        },
+        "dx": {
+          "title": "Dx",
+          "type": "integer"
+        },
+        "dy": {
+          "title": "Dy",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "command",
+        "dx",
+        "dy"
+      ],
+      "title": "Movement",
+      "type": "object"
+    },
+    "SensorReading": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "missing",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "status"
+      ],
+      "title": "SensorReading",
+      "type": "object"
+    },
+    "Sensors": {
+      "additionalProperties": false,
+      "properties": {
+        "metal": {
+          "$ref": "#/$defs/SensorReading"
+        },
+        "voc": {
+          "$ref": "#/$defs/SensorReading"
+        }
+      },
+      "required": [
+        "metal",
+        "voc"
+      ],
+      "title": "Sensors",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0",
+        "2.0"
+      ],
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "producer_id": {
+      "title": "Producer Id",
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "mock",
+        "manual",
+        "hardware"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "movement": {
+      "$ref": "#/$defs/Movement"
+    },
+    "sensors": {
+      "$ref": "#/$defs/Sensors"
+    }
+  },
+  "required": [
+    "schema_version",
+    "observed_at",
+    "producer_id",
+    "source",
+    "movement",
+    "sensors"
+  ],
+  "title": "HopPayload",
+  "type": "object"
+}

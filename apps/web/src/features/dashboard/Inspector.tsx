@@ -6,9 +6,20 @@ import { Capture, Overlay } from '../../components/Capture'
 import { classificationText, isLowConfidence, latestObservation, primaryFlag, sensorText } from '../../lib/cells'
 import { clock, confidence, pad3, xy } from '../../lib/format'
 import { materialName } from '../../lib/materials'
+import { LEVEL_COLORS, LEVEL_NAMES, strongest, type CellRisk, type RiskArea } from '../../lib/risk'
 
-export function Inspector({ mission, cell }: { mission: MissionSummary; cell: Cell | null }) {
+type Props = {
+  mission: MissionSummary
+  cell: Cell | null
+  cellRisk: CellRisk | undefined
+  area: RiskArea | null
+  onCloseArea: () => void
+  onPeak: (key: string) => void
+}
+
+export function Inspector({ mission, cell, cellRisk, area, onCloseArea, onPeak }: Props) {
   const [copied, setCopied] = useState(false)
+  if (area) return <AreaView area={area} onClose={onCloseArea} onPeak={onPeak} />
   if (!cell) {
     return (
       <aside style={asideStyle}>
@@ -61,9 +72,11 @@ export function Inspector({ mission, cell }: { mission: MissionSummary; cell: Ce
       </Capture>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
-        <Reading label="Metal" text={sensorText(cell.metal)} signal={cell.metal === 'detected'} />
-        <Reading label="VOC" text={sensorText(cell.voc)} />
+        <Reading label="Metal" text={sensorText(cell.metal)} value={strongest(cell, 'metal')} signal={cell.metal === 'detected'} />
+        <Reading label="VOC" text={sensorText(cell.voc)} value={strongest(cell, 'voc')} />
       </div>
+
+      <RiskBlock risk={cellRisk} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, border: '1px solid var(--line)' }}>
         <span className="key">Material</span>
@@ -121,12 +134,93 @@ function Fact({ label, value, divider }: { label: string; value: React.ReactNode
   )
 }
 
-function Reading({ label, text, signal }: { label: string; text: string; signal?: boolean }) {
+function Reading({ label, text, value, signal }: { label: string; text: string; value: number | null; signal?: boolean }) {
   return (
     <div style={{ background: 'var(--bg)', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <span className="key">{label}</span>
+      <span style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span className="key">{label}</span>
+        {value !== null && (
+          <span className="mono" style={{ fontSize: 12, color: signal ? 'var(--signal)' : 'var(--muted)' }} title="Strongest signal, 0 to 1">
+            {value.toFixed(2)}
+          </span>
+        )}
+      </span>
       <span style={{ fontSize: 16, fontWeight: 600, color: signal ? 'var(--signal)' : 'var(--text)' }}>{text}</span>
     </div>
+  )
+}
+
+/** The cell's risk: level and label with the reasons behind them, or why it is not assessed. */
+function RiskBlock({ risk }: { risk: CellRisk | undefined }) {
+  const assessed = risk?.assessed ?? true
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 14, border: '1px solid var(--line)', borderLeft: risk?.level ? `3px solid ${LEVEL_COLORS[risk.level]}` : '1px solid var(--line)' }}>
+      <span className="key">Risk</span>
+      {risk?.level ? (
+        <>
+          <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontSize: 16, fontWeight: 600 }}>{risk.label}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: LEVEL_COLORS[risk.level], whiteSpace: 'nowrap' }}>{LEVEL_NAMES[risk.level]}</span>
+          </span>
+          <ul className="risk-reasons">
+            {risk.reasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <span style={{ fontSize: 16, fontWeight: 600, color: assessed ? 'var(--text-2)' : 'var(--muted)' }}>
+          {assessed ? 'No indication' : `Not assessed: ${risk?.reasons[0] ?? ''}`}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** A hazard area: what it is, why it is rated so, and what to do. */
+function AreaView({ area, onClose, onPeak }: { area: RiskArea; onClose: () => void; onPeak: (key: string) => void }) {
+  const color = LEVEL_COLORS[area.level]
+  return (
+    <aside className="scroll" style={asideStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>Hazard area</span>
+          <span className="brand" style={{ fontWeight: 700, fontSize: 30, lineHeight: 1 }}>
+            {area.id}
+          </span>
+        </div>
+        <button className="btn btn-sm" aria-label="Close area" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 12, borderLeft: `3px solid ${color}` }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color }}>{LEVEL_NAMES[area.level]} risk</span>
+        <span style={{ fontSize: 20, fontWeight: 600 }}>{area.label}</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
+        <Fact label="Cells" value={area.cells.length} />
+        <Fact label="Evidence" value={(area.score / 100).toFixed(2)} divider />
+        <Fact label="Peak cell" value={xy({ x: area.peak[0], y: area.peak[1] })} divider />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <span className="key">Why</span>
+        <ul className="risk-reasons" style={{ fontSize: 14 }}>
+          {area.reasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 14, border: '1px solid var(--line)' }}>
+        <span className="key">Action</span>
+        <span style={{ fontSize: 15, lineHeight: 1.5 }}>{area.action}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 12, color: 'var(--faint)', lineHeight: 1.5 }}>
+        Sensors report signal strength, not what an object is. An area stays suspected until a team confirms or clears it.
+      </p>
+      <button className="btn" style={{ marginTop: 'auto' }} onClick={() => onPeak(`${area.peak[0]},${area.peak[1]}`)}>
+        Go to peak cell
+      </button>
+    </aside>
   )
 }
 

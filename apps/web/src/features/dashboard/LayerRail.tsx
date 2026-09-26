@@ -1,12 +1,16 @@
 import type { Cell } from '../../api/types'
 import { LAYERS, layerCounts, type Layer } from '../../lib/cells'
 import { MATERIAL_COLORS, MATERIAL_NAMES, MATERIALS } from '../../lib/materials'
+import { RiskPanel } from './RiskPanel'
+import type { RiskAssessment } from '../../lib/risk'
 
 type Swatch = { label: string; fill: string; border?: string; shape?: 'dot' | 'diamond' }
 
 const SENSOR_LEGEND = (detected: string): Swatch[] => [
-  { label: 'Detected', fill: detected },
-  { label: 'Not detected', fill: '#1c1c1b', border: '1px solid #3a3a37' },
+  { label: 'Strong signal (0.70+)', fill: detected },
+  { label: 'Detection (0.50+)', fill: `color-mix(in srgb, ${detected} 65%, #1c1c1b)` },
+  { label: 'Weak (0.30 to 0.49)', fill: `color-mix(in srgb, ${detected} 30%, #1c1c1b)` },
+  { label: 'Background', fill: '#1c1c1b', border: '1px solid #3a3a37' },
   { label: 'Sensor error', fill: '#5a2410' },
   { label: 'No reading', fill: 'transparent', border: '1px dashed #8a8a86' },
 ]
@@ -22,6 +26,15 @@ function legendFor(layer: Layer, cells: Cell[]): Swatch[] {
   switch (layer) {
     case 'combined':
       return [...materials, classifying, ...markers]
+    case 'risk':
+      return [
+        { label: 'Extremely high', fill: 'var(--risk-eh)' },
+        { label: 'High', fill: 'var(--risk-h)' },
+        { label: 'Medium', fill: 'var(--risk-m)' },
+        { label: 'Low', fill: '#4a4a46' },
+        { label: 'No indication', fill: '#1c1c1b', border: '1px solid #3a3a37' },
+        { label: 'Not assessed', fill: '#34353c', border: '1px dashed #8a8a86' },
+      ]
     case 'material':
       return [...materials, classifying]
     case 'captures':
@@ -42,8 +55,17 @@ function legendFor(layer: Layer, cells: Cell[]): Swatch[] {
   }
 }
 
-export function LayerRail({ layer, onLayer, cells }: { layer: Layer; onLayer: (l: Layer) => void; cells: Cell[] }) {
-  const counts = layerCounts(cells)
+type Props = {
+  layer: Layer
+  onLayer: (l: Layer) => void
+  cells: Cell[]
+  risk: RiskAssessment
+  area: string | null
+  onArea: (id: string | null) => void
+}
+
+export function LayerRail({ layer, onLayer, cells, risk, area, onArea }: Props) {
+  const counts = { ...layerCounts(cells), risk: risk.areas.length }
   return (
     <aside className="scroll" style={{ width: 240, flexShrink: 0, borderRight: '1px solid var(--line)', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -68,7 +90,7 @@ export function LayerRail({ layer, onLayer, cells }: { layer: Layer; onLayer: (l
             >
               <span style={{ flexGrow: 1, fontSize: 14, fontWeight: 500 }}>{l.name}</span>
               {count ? (
-                <span className="mono" style={{ fontSize: 12, color: active ? '#5a5a56' : l.id === 'metal' ? 'var(--signal)' : 'var(--muted)' }}>
+                <span className="mono" style={{ fontSize: 12, color: active ? '#5a5a56' : l.id === 'metal' || l.id === 'risk' ? 'var(--signal)' : 'var(--muted)' }}>
                   {count}
                 </span>
               ) : null}
@@ -76,6 +98,7 @@ export function LayerRail({ layer, onLayer, cells }: { layer: Layer; onLayer: (l
           )
         })}
       </div>
+      {layer === 'risk' && <RiskPanel risk={risk} area={area} onArea={onArea} />}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 10px' }}>
         <h2 className="section-title" style={{ paddingBottom: 4 }}>
           Legend

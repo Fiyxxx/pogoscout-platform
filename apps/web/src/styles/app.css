@@ -78,8 +78,46 @@ input::placeholder { color: var(--faint); }
 .world-marker .dot { color: var(--muted); }
 .world-marker[data-status='live'] .dot { color: var(--signal); }
 .world-marker[data-status='aborted'] .dot { color: var(--text); }
-.world-marker .count { font-family: var(--font-mono); color: var(--signal); }
+.world-marker .count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.world-marker .count[data-verdict='no_go'] { color: var(--signal); }
+.world-marker .count[data-verdict='caution'] { color: var(--risk-m); }
+.world-marker[data-focused='true'] .count { color: var(--bg); }
 .world-marker .count:empty { display: none; }
+
+/* Verdict chip: Go, Caution, No-go */
+.verdict { font: 500 11px var(--font-mono); padding: 3px 7px; border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap; }
+.verdict[data-verdict='no_go'] { color: var(--signal); border-color: rgba(255, 90, 31, 0.5); }
+.verdict[data-verdict='caution'] { color: var(--risk-m); border-color: rgba(224, 165, 38, 0.45); }
+.verdict[data-inverted='true'] { color: var(--bg); border-color: var(--bg); }
+
+/* Hazard area hotspot: a core dot with a ring that pulses for high and extremely high risk */
+.area-marker { --c: var(--risk-m); position: relative; width: 22px; height: 22px; padding: 0; border: none; background: transparent; cursor: pointer; }
+.area-marker[data-level='EH'] { --c: var(--risk-eh); }
+.area-marker[data-level='H'] { --c: var(--risk-h); }
+.area-marker .core { position: absolute; inset: 6px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.85); }
+.area-marker[data-kind='activity'] .core { background: transparent; border: 2px solid var(--c); }
+.area-marker .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--c); opacity: 0.6; }
+.area-marker[data-level='EH'] .ring, .area-marker[data-level='H'] .ring { animation: area-pulse 1.8s ease-out infinite; }
+.area-marker:hover .core, .area-marker[data-active='true'] .core { box-shadow: 0 0 0 2px #f2f2f0; }
+@keyframes area-pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .area-marker .ring { animation: none !important; } }
+.area-swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--risk-eh); box-shadow: 0 0 0 3px rgba(255, 58, 20, 0.3); }
+
+.maplibregl-marker:has(> .area-card) { z-index: 5; }
+.area-card { --c: var(--risk-m); width: 280px; padding: 12px 14px; background: rgba(10, 10, 10, 0.95); border: 1px solid var(--line-strong); border-top: 2px solid var(--c); color: var(--text); font: 13px var(--font-ui); display: flex; flex-direction: column; gap: 6px; cursor: default; }
+.area-card[data-level='EH'] { --c: var(--risk-eh); }
+.area-card[data-level='H'] { --c: var(--risk-h); }
+.area-card[data-level='L'] { --c: var(--risk-l); }
+.area-card-head { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+.area-card-level { color: var(--c); font-weight: 600; }
+.area-card-id { font-family: var(--font-mono); color: var(--muted); font-size: 11px; }
+.area-card-title { font-size: 15px; font-weight: 600; }
+.area-card-hint { font-size: 11px; color: var(--muted); }
+.area-card-key { font-size: 11px; color: var(--muted); padding-top: 4px; }
+.area-card-why { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; color: var(--text-2); }
+.area-card-action { color: var(--text); line-height: 1.45; }
+.area-card-foot { display: flex; gap: 8px; padding-top: 6px; }
+.area-card-foot .btn { flex-grow: 1; }
 .world-marker-stem { width: 1px; height: 26px; background: rgba(242, 242, 240, 0.55); }
 .world-scout {
   width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
@@ -133,3 +171,32 @@ input::placeholder { color: var(--faint); }
 .model-label .num { font-family: var(--font-mono); font-size: 10px; color: #6b6b66; }
 .model-label[data-selected='true'] { border-color: #ff5a1f; }
 .model-label[data-selected='true'] .num { color: #ff5a1f; }
+
+/* Risk assessment (mission page) */
+.verdict-lg { align-self: flex-start; font: 700 22px var(--font-brand); color: var(--muted); }
+.verdict-lg[data-verdict='no_go'] { color: var(--signal); }
+.verdict-lg[data-verdict='caution'] { color: var(--risk-m); }
+.risk-reasons { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--text-2); }
+.risk-matrix { display: grid; grid-template-columns: 22px repeat(5, minmax(0, 1fr)); gap: 2px; }
+.risk-matrix-head { font: 11px var(--font-mono); color: var(--muted); display: flex; align-items: center; justify-content: center; height: 18px; cursor: default; }
+.risk-matrix-cell {
+  height: 30px; display: flex; align-items: center; justify-content: center; font: 600 12px var(--font-mono); color: #0a0a0a;
+  background: var(--c); cursor: default;
+}
+.risk-matrix-cell[data-empty='true'] { background: color-mix(in srgb, var(--c) 18%, #0a0a0a); }
+.risk-area-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: transparent; color: var(--text); text-align: left; transition: background-color 0.15s ease; }
+.risk-area-row:hover { background: var(--surface-2); }
+.risk-area-row[aria-pressed='true'] { background: var(--text); color: var(--bg); }
+.risk-area-row[aria-pressed='true'] .mono { color: #5a5a56 !important; }
+.risk-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; flex-shrink: 0; }
+
+/* Hazard hotspots over the mission map */
+.map-hotspots { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.map-hotspots .area-marker { position: absolute; pointer-events: auto; transform: translate(-50%, -50%); }
+.map-hotspot-tip {
+  position: absolute; pointer-events: none; transform: translate(-50%, calc(-100% - 18px)); white-space: nowrap;
+  padding: 6px 10px; background: rgba(10, 10, 10, 0.95); border: 1px solid var(--line-strong); font-size: 12px; color: var(--text);
+}
+.map-hotspot-tip strong { font-weight: 600; margin-right: 6px; }
+.verdict-btn { background: transparent; cursor: pointer; font-size: 12px; padding: 5px 10px; }
+.verdict-btn:hover { background: var(--surface-2); }

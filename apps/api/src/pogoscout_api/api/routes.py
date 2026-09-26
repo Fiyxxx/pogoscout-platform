@@ -145,6 +145,15 @@ def get_cells(mission_id: str, session: SessionDep):
         raise http_error(exc) from exc
 
 
+@router.get("/missions/{mission_id}/risk")
+def get_risk(mission_id: str, session: SessionDep):
+    """Risk assessment: per-cell risk, hazard areas and the mission verdict (docs/API.md)."""
+    try:
+        return readmodel.risk_json(session, mission_id)
+    except DomainError as exc:
+        raise http_error(exc) from exc
+
+
 @router.get("/missions/{mission_id}/events", response_model=list[EventOut])
 def get_events(
     mission_id: str, session: SessionDep, limit: Annotated[int, Query(ge=1, le=5000)] = 200

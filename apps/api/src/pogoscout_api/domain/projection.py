@@ -12,6 +12,9 @@ from pogoscout_api.domain.hops import HopPayload, SensorReading
 
 SensorCellState = Literal["detected", "not_detected", "sensor_error", "missing"]
 
+# A reading at or above this signal strength marks the cell `detected`.
+DETECTED = 0.5
+
 
 @dataclass(frozen=True)
 class PlacedHop:
@@ -48,15 +51,17 @@ class Projection:
 
 
 def aggregate_sensor(readings: list[SensorReading]) -> SensorCellState:
-    """Any positive wins; then any valid negative; then error; else missing."""
+    """Any reading at or above DETECTED wins; then any valid reading; then error; else missing."""
     return aggregate_sensor_values([(r.value, r.status) for r in readings])
 
 
-def aggregate_sensor_values(readings: list[tuple[int | None, str]]) -> SensorCellState:
+def aggregate_sensor_values(readings: list[tuple[float | None, str]]) -> SensorCellState:
     """`aggregate_sensor` over plain (value, status) pairs."""
-    if any(status == "ok" and value == 1 for value, status in readings):
+    if any(
+        status == "ok" and value is not None and value >= DETECTED for value, status in readings
+    ):
         return "detected"
-    if any(status == "ok" and value == 0 for value, status in readings):
+    if any(status == "ok" for _, status in readings):
         return "not_detected"
     if any(status == "error" for _, status in readings):
         return "sensor_error"

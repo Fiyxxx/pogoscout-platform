@@ -18,7 +18,12 @@ def test_world_lists_anchored_missions_with_compact_cells(client) -> None:
     entry = world[0]
     assert entry["geo"] == geo
     assert entry["current"] == {"x": 1, "y": 1}
-    assert sorted(entry["cells"]) == [[0, 1, None, 1, 0], [1, 1, None, 0, 1]]
+    # [x, y, material, strongest metal, strongest voc, risk rank]: metal beside VOC is extremely
+    # high (4); VOC alone is a recent activity cue, high (3). Both fall in one area.
+    assert sorted(entry["cells"]) == [[0, 1, None, 1.0, 0, 4], [1, 1, None, 0, 1.0, 3]]
+    assert entry["risk"]["verdict"] == "no_go"
+    [area] = entry["risk"]["areas"]
+    assert (area["id"], area["kind"], area["level"], area["size"]) == ("A1", "explosive", "EH", 2)
 
     client.put("/api/v1/missions/g1/hops/3", json=hop("F"))
     again = client.get("/api/v1/world").json()["missions"][0]

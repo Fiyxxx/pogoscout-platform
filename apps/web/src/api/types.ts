@@ -1,9 +1,12 @@
 // Mirrors docs/API.md. Keep in sync with apps/api.
 
+import type { RiskArea, Verdict } from '../lib/risk'
+
 export type MissionStatus = 'live' | 'complete' | 'aborted'
 export type HopSource = 'mock' | 'manual' | 'hardware'
 export type SensorStatus = 'ok' | 'missing' | 'error'
-export type SensorReading = { value: 0 | 1 | null; status: SensorStatus }
+/** Signal strength 0..1 against the calibrated background (not a probability), or null when missing or failed. */
+export type SensorReading = { value: number | null; status: SensorStatus }
 export type SensorCellState = 'detected' | 'not_detected' | 'sensor_error' | 'missing'
 export type MovementCommand = 'F' | 'B' | 'L' | 'R'
 
@@ -30,7 +33,7 @@ export type MissionSummary = {
 }
 
 export type HopPayload = {
-  schema_version: '1.0'
+  schema_version: '1.0' | '2.0'
   observed_at: string
   producer_id: string
   source: HopSource
@@ -140,14 +143,20 @@ export type LiveMessage =
 /** GPS fix of the mission start and the grid's orientation on the ground. */
 export type GeoAnchor = { lat: number; lon: number; heading_deg: number; cell_m: number }
 
-/** Compact cell for the theatre view: [x, y, material label or null, metal 0|1, voc 0|1]. */
-export type WorldCell = [number, number, string | null, 0 | 1, 0 | 1]
+/**
+ * Compact cell for the theatre view: [x, y, material label or null, strongest metal 0..1,
+ * strongest VOC 0..1, risk rank 0 none, 1 low, 2 medium, 3 high, 4 extremely high, -1 not assessed].
+ */
+export type WorldCell = [number, number, string | null, number, number, number]
+
+export type WorldArea = Omit<RiskArea, 'cells'> & { size: number }
 
 export type WorldMission = {
   mission: MissionSummary
   geo: GeoAnchor
   current: Point | null
   cells: WorldCell[]
+  risk: { verdict: Verdict; verdict_reasons: string[]; areas: WorldArea[] }
 }
 
 export type WorldResponse = { missions: WorldMission[] }

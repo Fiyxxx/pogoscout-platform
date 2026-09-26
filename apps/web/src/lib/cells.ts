@@ -2,10 +2,11 @@ import type { Cell, CellFlag, Classification, Observation, SensorCellState } fro
 
 export const LOW_CONFIDENCE = 0.8
 
-export type Layer = 'combined' | 'material' | 'captures' | 'metal' | 'voc' | 'quality'
+export type Layer = 'combined' | 'risk' | 'material' | 'captures' | 'metal' | 'voc' | 'quality'
 
 export const LAYERS: { id: Layer; name: string }[] = [
   { id: 'combined', name: 'Combined' },
+  { id: 'risk', name: 'Risk' },
   { id: 'material', name: 'Material' },
   { id: 'captures', name: 'Captures' },
   { id: 'metal', name: 'Metal' },

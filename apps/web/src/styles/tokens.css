@@ -12,6 +12,11 @@
   --muted: #8a8a86;
   --faint: #6e6e6a;
   --signal: #ff5a1f;
+  /* Risk levels (Army risk matrix): extremely high, high, medium, low */
+  --risk-eh: #ff3a14;
+  --risk-h: #ff7a2e;
+  --risk-m: #e0a526;
+  --risk-l: #6e6e6a;
 
   --font-brand: 'Archivo Variable', 'Archivo', sans-serif;
   --font-ui: 'Geist Variable', 'Geist', system-ui, sans-serif;

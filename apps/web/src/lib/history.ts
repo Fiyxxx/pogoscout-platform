@@ -1,8 +1,11 @@
 import type { Cell, CellFlag, CellsResponse, SensorCellState, SensorReading } from '../api/types'
 
+// A reading at or above this signal strength marks the cell detected (same as the API).
+export const DETECTED = 0.5
+
 function aggregate(readings: SensorReading[]): SensorCellState {
-  if (readings.some((r) => r.status === 'ok' && r.value === 1)) return 'detected'
-  if (readings.some((r) => r.status === 'ok' && r.value === 0)) return 'not_detected'
+  if (readings.some((r) => r.status === 'ok' && r.value !== null && r.value >= DETECTED)) return 'detected'
+  if (readings.some((r) => r.status === 'ok')) return 'not_detected'
   if (readings.some((r) => r.status === 'error')) return 'sensor_error'
   return 'missing'
 }

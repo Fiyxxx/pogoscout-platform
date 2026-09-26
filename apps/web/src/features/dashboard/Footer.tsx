@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react'
 import type { CellsResponse, MissionEvent } from '../../api/types'
 import { cellKey } from '../../lib/cells'
 import { clock } from '../../lib/format'
+import { DETECTED } from '../../lib/history'
 import type { Playback } from './usePlayback'
 
 const MAX_BINS = 240
@@ -82,8 +83,8 @@ function Timeline({ full, times, playback, onSelect }: { full: CellsResponse; ti
     const hopLevel = full.path.map((p) => {
       const c = byKey.get(cellKey(p))
       const obs = c?.observations.find((o) => o.hop_id === p.hop_id)
-      if (obs?.metal.value === 1) return 3
-      if (obs?.voc.value === 1) return 2
+      if ((obs?.metal.value ?? 0) >= DETECTED) return 3
+      if ((obs?.voc.value ?? 0) >= DETECTED) return 2
       return c && c.flags.some((f) => f !== 'metal' && f !== 'voc') ? 1 : 0
     })
     const count = Math.min(MAX_BINS, n)

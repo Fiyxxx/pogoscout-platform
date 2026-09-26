@@ -110,7 +110,8 @@ def test_canal_layout() -> None:
     golden = load_expected(FIXTURE_DIR / "canal_corridor_v1")
     assert 1150 <= golden["path_length"] <= 1250
     assert golden["current"] == {"x": 0, "y": 149}
-    assert len(golden["metal_cells"]) == 10 and len(golden["voc_cells"]) == 6
+    # Canal metal is weak drainage hardware: below detection strength, so no metal cells.
+    assert len(golden["metal_cells"]) == 0 and len(golden["voc_cells"]) == 6
     for label in ("water", "concrete", "tiles_pavers", "grass_vegetation", "leaf_litter"):
         assert golden["materials"][label] > 50
     assert golden["materials"]["mud"] > 0 and golden["materials"]["gravel"] > 0

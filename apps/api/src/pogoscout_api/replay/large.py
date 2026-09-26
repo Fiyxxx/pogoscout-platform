@@ -19,6 +19,7 @@ from pogoscout_api.replay.generate import (
     IMAGE_DELAY_MS,
     OK0,
     OK1,
+    OKW,
     FixtureBuilder,
     Reading,
 )
@@ -134,8 +135,10 @@ class SurveyPlan:
         rng: random.Random,
         *,
         confusion: float,
+        metal_reading: Reading = OK1,
     ) -> None:
         self.b = builder
+        self.metal_reading = metal_reading
         self.commands = commands
         self.positions = walk(commands)
         self.grid = grid
@@ -177,7 +180,7 @@ class SurveyPlan:
 
     def readings(self, hop: int) -> tuple[Reading, Reading]:
         cell = self.positions[hop - 1]
-        metal = OK1 if cell in self.metal else OK0
+        metal = self.metal_reading if cell in self.metal else OK0
         voc = OK1 if cell in self.voc else OK0
         fault = self.sensor_faults.get(hop)
         if fault is not None:
@@ -398,20 +401,23 @@ def build_canal_corridor(out_dir: Path, seed: int = 924) -> None:
         metal.add(cell)
         taken.add(cell)
     voc: set[tuple[int, int]] = set()
-    for culvert in (CULVERTS[1], CULVERTS[4]):
+    # Activity by the last outlet and upstream of it, clear of the metal at the other culverts.
+    for culvert in (CULVERTS[4], CULVERTS[4] - 12):
         voc |= pick_near(rng, (4, culvert), 2, 2, visited, taken)
     for cell in rng.sample(sorted(visited - taken), 2):
         voc.add(cell)
         taken.add(cell)
 
-    plan = SurveyPlan(b, commands, grid, metal, voc, soft, rng, confusion=0.25)
+    # Metal here is drainage hardware at the culvert outlets: weak, clutter-strength readings that
+    # call for a re-survey rather than a halt.
+    plan = SurveyPlan(b, commands, grid, metal, voc, soft, rng, confusion=0.25, metal_reading=OKW)
     hops = plan.hop_count
     plan.choose_faults(errors=6, missing=3, no_image=4, out_of_order=False, duplicate=False)
     plan.emit()
     b.write_large(
         f"Canal corridor survey, {CANAL_W} cells wide by {CANAL_L} long ({hops} hops), "
         "serpentine across the width: concrete canal edge and water to the east, paver park "
-        f"connector, grass verge and leaf litter. {len(metal)} metal anomalies (mostly by "
+        f"connector, grass verge and leaf litter. {len(metal)} weak metal readings (mostly by "
         f"culvert outlets), {len(voc)} VOC cues. Screenshots are generated at replay time.",
         "Canal corridor survey",
     )

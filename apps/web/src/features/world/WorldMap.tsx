@@ -3,17 +3,20 @@ import { AttributionControl, type GeoJSONSource, LngLatBounds, Map as MapLibreMa
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { Feature, FeatureCollection } from 'geojson'
 import { useEffect, useRef } from 'react'
-import type { WorldMission } from '../../api/types'
+import type { WorldArea, WorldMission } from '../../api/types'
 import { cellBounds, cellRing, gridToLngLat } from '../../lib/geo'
 import { isMaterial, MATERIAL_COLORS } from '../../lib/materials'
+import { LEVEL_NAMES, VERDICT_NAMES } from '../../lib/risk'
 
-export type WorldLayers = { hotspots: boolean; footprints: boolean }
+export type HeatLayer = 'risk' | 'metal' | 'voc' | 'off'
+export type WorldLayers = { heat: HeatLayer; areas: boolean; footprints: boolean }
 
 type Props = {
   missions: WorldMission[]
   focused: string | null
   layers: WorldLayers
   onFocus: (id: string | null) => void
+  onOpenMission: (id: string) => void
   overviewSignal: number
 }
 
@@ -23,6 +26,10 @@ setWorkerUrl(maplibreWorkerUrl)
 const TERRAIN_EXAGGERATION = 1.5
 const OVERVIEW = { center: [103.81, 1.318] as [number, number], zoom: 11.15, pitch: 50, bearing: -12 }
 const SIGNAL = '#ff5a1f'
+// Heat weight per risk rank (1 low .. 4 extremely high); not-assessed cells add no heat.
+const RISK_WEIGHT = [0, 0.12, 0.4, 0.75, 1]
+// Area markers appear once the map is close enough to tell them apart.
+const AREA_MIN_ZOOM = 13.2
 
 /** Absolute URL: MapLibre resolves tile templates in a worker, where relative paths do not work. */
 function tileUrl(layer: 'imagery' | 'labels' | 'terrain'): string {
@@ -67,14 +74,17 @@ function toGeoJSON(missions: WorldMission[]) {
   const detections: Feature[] = []
   const outlines: Feature[] = []
   for (const w of missions) {
-    for (const [x, y, label, metal, voc] of w.cells) {
+    for (const [x, y, label, metal, voc, risk] of w.cells) {
       cells.push({
         type: 'Feature',
         properties: { mission: w.mission.id, color: isMaterial(label) ? MATERIAL_COLORS[label] : '#2a2a28' },
         geometry: { type: 'Polygon', coordinates: [cellRing(w.geo, x, y)] },
       })
-      if (metal) detections.push({ type: 'Feature', properties: { kind: 'metal', weight: 1 }, geometry: { type: 'Point', coordinates: gridToLngLat(w.geo, x, y) } })
-      if (voc) detections.push({ type: 'Feature', properties: { kind: 'voc', weight: 0.4 }, geometry: { type: 'Point', coordinates: gridToLngLat(w.geo, x, y) } })
+      const point = { type: 'Point' as const, coordinates: gridToLngLat(w.geo, x, y) }
+      // Background readings (below 0.30) add no heat; stronger signals weigh by their strength.
+      if (metal >= 0.3) detections.push({ type: 'Feature', properties: { kind: 'metal', weight: metal, hit: metal >= 0.5 }, geometry: point })
+      if (voc >= 0.3) detections.push({ type: 'Feature', properties: { kind: 'voc', weight: voc, hit: voc >= 0.5 }, geometry: point })
+      if (risk > 0) detections.push({ type: 'Feature', properties: { kind: 'risk', weight: RISK_WEIGHT[risk] }, geometry: point })
     }
     const [[west, south], [east, north]] = cellBounds(w.geo, w.cells.map(([x, y]) => ({ x, y })))
     outlines.push({
@@ -89,15 +99,23 @@ function toGeoJSON(missions: WorldMission[]) {
 
 const GROUPS = ['done', 'live'] as const
 type GroupName = (typeof GROUPS)[number]
-const layerIds = (kind: 'cells' | 'outlines' | 'hotspots' | 'metal' | 'voc') => GROUPS.map((g) => `${g}-${kind}`)
+type LayerKind = 'cells' | 'outlines' | 'heat-risk' | 'heat-metal' | 'heat-voc' | 'metal' | 'voc'
+const layerIds = (kind: LayerKind) => GROUPS.map((g) => `${g}-${kind}`)
 
-/** Cheap change signature: cell counts, hops and detections per mission. */
+const HEAT_COLORS: Record<Exclude<HeatLayer, 'off'>, unknown[]> = {
+  risk: [0, 'rgba(255,196,0,0)', 0.12, 'rgba(255,196,0,0.28)', 0.35, 'rgba(255,140,20,0.55)', 0.65, 'rgba(255,90,31,0.82)', 0.9, '#ff3a14', 1, '#ffe0d2'],
+  metal: [0, 'rgba(255,90,31,0)', 0.15, 'rgba(255,90,31,0.22)', 0.45, 'rgba(255,90,31,0.55)', 0.75, 'rgba(255,90,31,0.85)', 1, '#ffd2bd'],
+  voc: [0, 'rgba(160,200,255,0)', 0.15, 'rgba(160,200,255,0.2)', 0.45, 'rgba(190,215,255,0.5)', 0.75, 'rgba(225,235,255,0.8)', 1, '#ffffff'],
+}
+
+/** Cheap change signature: cell counts, hops, detections and risk per mission. */
 function signature(missions: WorldMission[]): string {
   return missions
     .map((w) => {
       const s = w.mission.stats
       const classified = Object.values(s.materials).reduce((a, b) => a + b, 0)
-      return `${w.mission.id}:${w.cells.length}:${s.hops}:${s.metal}:${s.voc}:${classified}`
+      const areas = w.risk.areas.map((a) => `${a.id}${a.level}${a.size}`).join('')
+      return `${w.mission.id}:${w.cells.length}:${s.hops}:${s.metal}:${s.voc}:${classified}:${w.risk.verdict}:${areas}`
     })
     .join('|')
 }
@@ -120,25 +138,27 @@ function addMissionLayers(map: MapLibreMap) {
     })
   }
   for (const g of GROUPS) {
+    for (const kind of ['risk', 'metal', 'voc'] as const) {
+      map.addLayer({
+        id: `${g}-heat-${kind}`, type: 'heatmap', source: `${g}-detections`, filter: ['==', ['get', 'kind'], kind],
+        layout: { visibility: kind === 'risk' ? 'visible' : 'none' },
+        paint: {
+          'heatmap-weight': ['get', 'weight'],
+          // Broad glow for the overview, tight spots up close so the heat never smears across a
+          // whole mission: at mission zoom the hazard areas and cells carry the detail.
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.4, 13, 1.2, 16, 0.55, 18, 0.35],
+          'heatmap-radius': ['interpolate', ['exponential', 1.6], ['zoom'], 9, 12, 13, 22, 16, 30, 18, 56],
+          'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], ...HEAT_COLORS[kind]] as never,
+          'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0.85, 17.5, 0.55],
+        },
+      })
+    }
     map.addLayer({
-      id: `${g}-hotspots`, type: 'heatmap', source: `${g}-detections`,
-      paint: {
-        'heatmap-weight': ['get', 'weight'],
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.2, 15, 2.2],
-        'heatmap-radius': ['interpolate', ['exponential', 1.6], ['zoom'], 9, 12, 13, 26, 16, 60, 18, 120],
-        'heatmap-color': [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(255,90,31,0)', 0.15, 'rgba(255,90,31,0.22)', 0.45, 'rgba(255,90,31,0.55)', 0.75, 'rgba(255,90,31,0.85)', 1, '#ffd2bd',
-        ],
-        'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0.9, 17.5, 0.3],
-      },
-    })
-    map.addLayer({
-      id: `${g}-metal`, type: 'circle', source: `${g}-detections`, minzoom: 15.5, filter: ['==', ['get', 'kind'], 'metal'],
+      id: `${g}-metal`, type: 'circle', source: `${g}-detections`, minzoom: 15.5, layout: { visibility: 'none' }, filter: ['all', ['==', ['get', 'kind'], 'metal'], ['get', 'hit']],
       paint: { 'circle-color': SIGNAL, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 2.5, 18, 6], 'circle-stroke-color': '#0a0a0a', 'circle-stroke-width': 1 },
     })
     map.addLayer({
-      id: `${g}-voc`, type: 'circle', source: `${g}-detections`, minzoom: 15.5, filter: ['==', ['get', 'kind'], 'voc'],
+      id: `${g}-voc`, type: 'circle', source: `${g}-detections`, minzoom: 15.5, layout: { visibility: 'none' }, filter: ['all', ['==', ['get', 'kind'], 'voc'], ['get', 'hit']],
       paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 3, 18, 7], 'circle-stroke-color': '#f2f2f0', 'circle-stroke-width': 1.5 },
     })
   }
@@ -179,18 +199,68 @@ function paintMarker(el: HTMLElement, w: WorldMission, focused: boolean) {
   dot.className = live ? 'dot pulse' : 'dot'
   ;(el.querySelector('.name') as HTMLElement).textContent = w.mission.name
   const count = el.querySelector('.count') as HTMLElement
-  count.textContent = w.mission.stats.metal ? String(w.mission.stats.metal) : ''
+  count.textContent = VERDICT_NAMES[w.risk.verdict]
+  count.dataset.verdict = w.risk.verdict
 }
 
-export default function WorldMap({ missions, focused, layers, onFocus, overviewSignal }: Props) {
+/** A pulsing hotspot for a hazard area: hover previews it, a click pins the full card. */
+function areaElement(): HTMLElement {
+  const el = document.createElement('button')
+  el.className = 'area-marker'
+  el.innerHTML = '<span class="ring"></span><span class="core"></span>'
+  return el
+}
+
+function paintArea(el: HTMLElement, a: WorldArea) {
+  el.dataset.level = a.level
+  el.dataset.kind = a.kind
+  el.setAttribute('aria-label', `${a.label}, ${LEVEL_NAMES[a.level]} risk`)
+}
+
+/** The area card. Built with textContent: no markup from data. */
+function areaCard(w: WorldMission, a: WorldArea, pinned: boolean, onOpen: () => void, onClose: () => void): HTMLElement {
+  const card = document.createElement('div')
+  card.className = 'area-card'
+  card.dataset.level = a.level
+  const add = (parent: HTMLElement, tag: string, cls: string, text?: string) => {
+    const node = document.createElement(tag)
+    if (cls) node.className = cls
+    if (text !== undefined) node.textContent = text
+    parent.appendChild(node)
+    return node
+  }
+  const head = add(card, 'div', 'area-card-head')
+  add(head, 'span', 'area-card-level', `${LEVEL_NAMES[a.level]} risk`)
+  add(head, 'span', 'area-card-id', `${w.mission.id} ${a.id}`)
+  add(card, 'div', 'area-card-title', a.label)
+  if (!pinned) {
+    add(card, 'div', 'area-card-hint', 'Click for details')
+    return card
+  }
+  add(card, 'div', 'area-card-key', 'Why')
+  const list = add(card, 'ul', 'area-card-why')
+  for (const r of a.reasons) add(list, 'li', '', r)
+  add(card, 'div', 'area-card-key', 'Action')
+  add(card, 'div', 'area-card-action', a.action)
+  const foot = add(card, 'div', 'area-card-foot')
+  const open = add(foot, 'button', 'btn btn-sm', 'Open mission') as HTMLButtonElement
+  open.addEventListener('click', onOpen)
+  const close = add(foot, 'button', 'btn btn-sm', 'Close') as HTMLButtonElement
+  close.addEventListener('click', onClose)
+  return card
+}
+
+export default function WorldMap({ missions, focused, layers, onFocus, onOpenMission, overviewSignal }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const ready = useRef(false)
   const markers = useRef(new Map<string, { marker: Marker; el: HTMLElement }>())
   const scouts = useRef(new Map<string, Marker>())
+  const areaMarkers = useRef(new Map<string, { marker: Marker; el: HTMLElement }>())
+  const card = useRef<{ key: string; pinned: boolean; marker: Marker } | null>(null)
   const sent = useRef<Record<GroupName, string | null>>({ done: null, live: null })
-  const latest = useRef({ missions, focused, onFocus })
-  latest.current = { missions, focused, onFocus }
+  const latest = useRef({ missions, focused, onFocus, onOpenMission, layers })
+  latest.current = { missions, focused, onFocus, onOpenMission, layers }
 
   useEffect(() => {
     const map = new MapLibreMap({
@@ -218,9 +288,12 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
         if (mission) latest.current.onFocus(mission)
       })
     }
+    map.on('zoom', () => showAreas(map))
+    map.on('click', () => closeCard(false))
     mapRef.current = map
     const markerMap = markers.current
     const scoutMap = scouts.current
+    const areaMap = areaMarkers.current
     const sentGroups = sent.current
     return () => {
       sentGroups.done = null
@@ -228,6 +301,8 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
       ready.current = false
       markerMap.clear()
       scoutMap.clear()
+      areaMap.clear()
+      card.current = null
       map.remove()
       mapRef.current = null
     }
@@ -285,6 +360,69 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
       scout.remove()
       scouts.current.delete(id)
     }
+
+    const areasSeen = new Set<string>()
+    for (const w of list) {
+      for (const a of w.risk.areas) {
+        const key = `${w.mission.id}/${a.id}`
+        areasSeen.add(key)
+        let entry = areaMarkers.current.get(key)
+        if (!entry) {
+          const el = areaElement()
+          el.addEventListener('mouseenter', () => openCard(map, key, false))
+          el.addEventListener('mouseleave', () => closeCard(true))
+          el.addEventListener('click', (e) => {
+            e.stopPropagation()
+            openCard(map, key, true)
+          })
+          entry = { el, marker: new Marker({ element: el }).setLngLat(gridToLngLat(w.geo, a.centroid[0], a.centroid[1])).addTo(map) }
+          areaMarkers.current.set(key, entry)
+        }
+        entry.marker.setLngLat(gridToLngLat(w.geo, a.centroid[0], a.centroid[1]))
+        paintArea(entry.el, a)
+      }
+    }
+    for (const [key, entry] of areaMarkers.current) {
+      if (areasSeen.has(key)) continue
+      entry.marker.remove()
+      areaMarkers.current.delete(key)
+      if (card.current?.key === key) closeCard(false)
+    }
+    showAreas(map)
+  }
+
+  function findArea(key: string): [WorldMission, WorldArea] | null {
+    const [missionId, areaId] = key.split('/')
+    const w = latest.current.missions.find((m) => m.mission.id === missionId)
+    const a = w?.risk.areas.find((x) => x.id === areaId)
+    return w && a ? [w, a] : null
+  }
+
+  function openCard(map: MapLibreMap, key: string, pinned: boolean) {
+    // Hover never replaces a pinned card; a click always wins.
+    if (!pinned && card.current?.pinned) return
+    const found = findArea(key)
+    if (!found) return
+    const [w, a] = found
+    card.current?.marker.remove()
+    const el = areaCard(w, a, pinned, () => latest.current.onOpenMission(w.mission.id), () => closeCard(false))
+    el.addEventListener('click', (e) => e.stopPropagation())
+    const marker = new Marker({ element: el, anchor: 'bottom', offset: [0, -16] }).setLngLat(gridToLngLat(w.geo, a.centroid[0], a.centroid[1])).addTo(map)
+    card.current = { key, pinned, marker }
+    for (const [k, entry] of areaMarkers.current) entry.el.dataset.active = String(pinned && k === key)
+  }
+
+  function closeCard(hoverOnly: boolean) {
+    if (!card.current || (hoverOnly && card.current.pinned)) return
+    card.current.marker.remove()
+    card.current = null
+    for (const entry of areaMarkers.current.values()) entry.el.dataset.active = 'false'
+  }
+
+  function showAreas(map: MapLibreMap) {
+    const visible = latest.current.layers.areas && map.getZoom() >= AREA_MIN_ZOOM
+    for (const entry of areaMarkers.current.values()) entry.el.style.display = visible ? '' : 'none'
+    if (!visible) closeCard(false)
   }
 
   useEffect(() => {
@@ -324,8 +462,13 @@ export default function WorldMap({ missions, focused, layers, onFocus, overviewS
     if (!map) return
     const apply = () => {
       if (!ready.current) return
-      for (const id of layerIds('hotspots')) map.setLayoutProperty(id, 'visibility', layers.hotspots ? 'visible' : 'none')
+      for (const kind of ['risk', 'metal', 'voc'] as const)
+        for (const id of layerIds(`heat-${kind}`)) map.setLayoutProperty(id, 'visibility', layers.heat === kind ? 'visible' : 'none')
+      // Individual detections only on their own heat map; the risk view shows hazard areas instead.
+      for (const kind of ['metal', 'voc'] as const)
+        for (const id of layerIds(kind)) map.setLayoutProperty(id, 'visibility', layers.heat === kind ? 'visible' : 'none')
       for (const id of [...layerIds('cells'), ...layerIds('outlines')]) map.setLayoutProperty(id, 'visibility', layers.footprints ? 'visible' : 'none')
+      showAreas(map)
     }
     if (map.isStyleLoaded()) apply()
     else map.once('load', apply)

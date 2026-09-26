@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CellsResponse } from '../../api/types'
-import type { Layer } from '../../lib/cells'
+import { cellKey, type Layer } from '../../lib/cells'
 import { CELL_M, footprintM } from '../../lib/geo'
 import { MissionScene, type HeightMetric, type ViewMode } from './scene'
+import { LEVEL_NAMES, type RiskAssessment } from '../../lib/risk'
 
 type Props = {
   data: CellsResponse
   layer: Layer
   selected: string | null
   onSelect: (key: string) => void
+  risk: RiskAssessment
+  area: string | null
+  onArea: (id: string | null) => void
 }
 
 // Checked once per page load. The probe context is released straight away: browsers cap the
@@ -27,7 +31,7 @@ function webglSupported(): boolean {
   return webgl
 }
 
-export default function MissionMap({ data, layer, selected, onSelect }: Props) {
+export default function MissionMap({ data, layer, selected, onSelect, risk, area, onArea }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<MissionScene | null>(null)
   const drag = useRef<{ x: number; y: number; moved: boolean; pan: boolean } | null>(null)
@@ -55,6 +59,52 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
   }, [])
 
   useEffect(() => sceneRef.current?.update(data), [data])
+
+  // Risk levels for the risk layer: U marks cells that could not be assessed.
+  useEffect(() => {
+    const levels = new Map<string, string>()
+    for (const c of risk.cells) levels.set(cellKey(c), c.assessed ? (c.level ?? '') : 'U')
+    sceneRef.current?.setRisk(levels)
+  }, [risk])
+
+  // Hotspots are HTML over the canvas; the scene moves them after every frame.
+  const hotspots = useRef(new Map<string, HTMLElement>())
+  const tip = useRef<HTMLDivElement>(null)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const showHotspots = layer === 'risk'
+  const latest = useRef({ risk, hovered })
+  useEffect(() => {
+    latest.current = { risk, hovered }
+  })
+  useEffect(() => {
+    const scene = sceneRef.current
+    if (!scene) return
+    scene.onFrame = () => {
+      const { risk: r, hovered: h } = latest.current
+      for (const a of r.areas) {
+        const el = hotspots.current.get(a.id)
+        if (!el) continue
+        const p = scene.project(a.centroid[0], a.centroid[1])
+        el.style.left = `${p.left}px`
+        el.style.top = `${p.top}px`
+        el.style.visibility = p.visible ? 'visible' : 'hidden'
+        if (a.id === h && tip.current) {
+          tip.current.style.left = `${p.left}px`
+          tip.current.style.top = `${p.top}px`
+        }
+      }
+    }
+    return () => {
+      scene.onFrame = null
+    }
+  }, [])
+  const hoveredArea = risk.areas.find((a) => a.id === hovered)
+
+  // Fly to an area when it is chosen, from a hotspot or from the list.
+  useEffect(() => {
+    const chosen = latest.current.risk.areas.find((a) => a.id === area)
+    if (chosen) sceneRef.current?.focus(cellKey({ x: chosen.peak[0], y: chosen.peak[1] }))
+  }, [area])
   useEffect(() => sceneRef.current?.setOptions({ layer, view, metric, selected }), [layer, view, metric, selected])
 
   useEffect(() => {
@@ -105,6 +155,36 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
           if (key) sceneRef.current?.focus(key)
         }}
       />
+      {showHotspots && (
+        <div className="map-hotspots">
+          {risk.areas.map((a) => (
+            <button
+              key={a.id}
+              ref={(el) => {
+                if (el) hotspots.current.set(a.id, el)
+                else hotspots.current.delete(a.id)
+              }}
+              className="area-marker"
+              data-level={a.level}
+              data-kind={a.kind}
+              data-active={a.id === area}
+              aria-label={`${a.id} ${a.label}, ${LEVEL_NAMES[a.level]} risk`}
+              onMouseEnter={() => setHovered(a.id)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => onArea(a.id === area ? null : a.id)}
+            >
+              <span className="ring" />
+              <span className="core" />
+            </button>
+          ))}
+          {hoveredArea && (
+            <div ref={tip} className="map-hotspot-tip">
+              <strong style={{ color: `var(--risk-${hoveredArea.level.toLowerCase()})` }}>{LEVEL_NAMES[hoveredArea.level]}</strong>
+              {hoveredArea.id} {hoveredArea.label}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ position: 'absolute', right: 20, top: 16, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <button

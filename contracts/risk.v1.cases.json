@@ -1,0 +1,2757 @@
+{
+  "rules_version": "risk-1",
+  "cases": [
+    {
+      "name": "clean",
+      "description": "Clean background everywhere: go.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "go",
+        "verdict_reasons": [
+          "No indications in surveyed cells"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [],
+        "areas": []
+      }
+    },
+    {
+      "name": "strong_isolated_metal",
+      "description": "One strong metal reading: a suspected explosive hazard, extremely high.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.91,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 91,
+            "probability": "A",
+            "severity": "I",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.91"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                1,
+                1
+              ]
+            ],
+            "centroid": [
+              1.0,
+              1.0
+            ],
+            "peak": [
+              1,
+              1
+            ],
+            "score": 91,
+            "reasons": [
+              "Metal signal 0.91"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "moderate_metal",
+      "description": "Metal at detection strength with nothing else: high, still no-go.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.56,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 56,
+            "probability": "D",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.56"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                1,
+                1
+              ]
+            ],
+            "centroid": [
+              1.0,
+              1.0
+            ],
+            "peak": [
+              1,
+              1
+            ],
+            "score": 56,
+            "reasons": [
+              "Metal signal 0.56"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "weak_clutter",
+      "description": "A faint metal reading: a weak reading to re-survey, never a hazard area.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.38,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "caution",
+        "verdict_reasons": [
+          "1 weak metal reading to re-survey"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 38,
+            "probability": "E",
+            "severity": "I",
+            "level": "M",
+            "label": "Metal anomaly",
+            "reasons": [
+              "Metal signal 0.38"
+            ]
+          }
+        ],
+        "areas": []
+      }
+    },
+    {
+      "name": "weak_metal_seen_twice",
+      "description": "Faint metal on both visits is still faint: no confirmation bonus.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.41,
+              "ok"
+            ],
+            [
+              0.44,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "caution",
+        "verdict_reasons": [
+          "1 weak metal reading to re-survey"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 44,
+            "probability": "E",
+            "severity": "I",
+            "level": "M",
+            "label": "Metal anomaly",
+            "reasons": [
+              "Metal signal 0.44",
+              "Metal on all 2 visits"
+            ]
+          }
+        ],
+        "areas": []
+      }
+    },
+    {
+      "name": "confirmed_on_revisit",
+      "description": "A detection read again on the second visit gains confidence.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.66,
+              "ok"
+            ],
+            [
+              0.71,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 81,
+            "probability": "B",
+            "severity": "I",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.71",
+              "Metal confirmed on all 2 visits"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                1,
+                1
+              ]
+            ],
+            "centroid": [
+              1.0,
+              1.0
+            ],
+            "peak": [
+              1,
+              1
+            ],
+            "score": 81,
+            "reasons": [
+              "Metal signal 0.71",
+              "Metal confirmed on all 2 visits"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "not_repeated",
+      "description": "Metal on one visit but not the next loses confidence.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.66,
+              "ok"
+            ],
+            [
+              0.05,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 56,
+            "probability": "D",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.66",
+              "Metal on 1 of 2 visits"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                1,
+                1
+              ]
+            ],
+            "centroid": [
+              1.0,
+              1.0
+            ],
+            "peak": [
+              1,
+              1
+            ],
+            "score": 56,
+            "reasons": [
+              "Metal signal 0.66",
+              "Metal on 1 of 2 visits"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "metal_beside_voc",
+      "description": "Weak metal beside a VOC detection is corroborated into a hazard.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.45,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.62,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 1,
+            "y": 1,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 55,
+            "probability": "D",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.45",
+              "VOC 0.62 at or beside this cell"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "assessed": true,
+            "kind": "activity",
+            "score": 62,
+            "probability": "C",
+            "severity": "III",
+            "level": "M",
+            "label": "Recent activity cue",
+            "reasons": [
+              "VOC signal 0.62",
+              "No metal signal"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                1,
+                1
+              ],
+              [
+                2,
+                1
+              ]
+            ],
+            "centroid": [
+              1.5,
+              1.0
+            ],
+            "peak": [
+              1,
+              1
+            ],
+            "score": 55,
+            "reasons": [
+              "Metal signal 0.45",
+              "VOC 0.62 at or beside this cell",
+              "2 cells in this area"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "voc_only",
+      "description": "VOC without metal: a recent activity cue, moderate severity.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.93,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "caution",
+        "verdict_reasons": [
+          "1 recent activity area"
+        ],
+        "coverage": {
+          "surveyed": 9,
+          "assessed": 9
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 0,
+            "y": 0,
+            "assessed": true,
+            "kind": "activity",
+            "score": 93,
+            "probability": "A",
+            "severity": "III",
+            "level": "H",
+            "label": "Recent activity cue",
+            "reasons": [
+              "VOC signal 0.93",
+              "No metal signal"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "activity",
+            "level": "H",
+            "label": "Recent activity",
+            "action": "Approach with caution and observe. A cue, not a detection.",
+            "cells": [
+              [
+                0,
+                0
+              ]
+            ],
+            "centroid": [
+              0.0,
+              0.0
+            ],
+            "peak": [
+              0,
+              0
+            ],
+            "score": 93,
+            "reasons": [
+              "VOC signal 0.93",
+              "No metal signal"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pattern",
+      "description": "Evenly spaced detections: the middle one gains the pattern bonus.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.58,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.6,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "metal": [
+            [
+              0.57,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 5,
+          "assessed": 5
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            1,
+            2,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 0,
+            "y": 0,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 58,
+            "probability": "D",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.58"
+            ]
+          },
+          {
+            "x": 2,
+            "y": 0,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 70,
+            "probability": "C",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.60",
+              "2 more metal hits within 2 cells"
+            ]
+          },
+          {
+            "x": 4,
+            "y": 0,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 57,
+            "probability": "D",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.57"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                0,
+                0
+              ],
+              [
+                2,
+                0
+              ],
+              [
+                4,
+                0
+              ]
+            ],
+            "centroid": [
+              2.0,
+              0.0
+            ],
+            "peak": [
+              2,
+              0
+            ],
+            "score": 70,
+            "reasons": [
+              "Metal signal 0.60",
+              "2 more metal hits within 2 cells",
+              "3 cells in this area"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "two_areas",
+      "description": "Detections far apart form separate areas, ordered by level then score.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.62,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 5,
+          "y": 0,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 6,
+          "y": 0,
+          "metal": [
+            [
+              0.95,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "2 suspected explosive hazards"
+        ],
+        "coverage": {
+          "surveyed": 7,
+          "assessed": 7
+        },
+        "matrix": {
+          "I": [
+            1,
+            0,
+            1,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 0,
+            "y": 0,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 62,
+            "probability": "C",
+            "severity": "I",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.62"
+            ]
+          },
+          {
+            "x": 6,
+            "y": 0,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 95,
+            "probability": "A",
+            "severity": "I",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.95"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                6,
+                0
+              ]
+            ],
+            "centroid": [
+              6.0,
+              0.0
+            ],
+            "peak": [
+              6,
+              0
+            ],
+            "score": 95,
+            "reasons": [
+              "Metal signal 0.95"
+            ]
+          },
+          {
+            "id": "A2",
+            "kind": "explosive",
+            "level": "H",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                0,
+                0
+              ]
+            ],
+            "centroid": [
+              0.0,
+              0.0
+            ],
+            "peak": [
+              0,
+              0
+            ],
+            "score": 62,
+            "reasons": [
+              "Metal signal 0.62"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "not_assessed",
+      "description": "Cells without a valid metal reading are not assessed, never safe.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              null,
+              "error"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "metal": [
+            [
+              null,
+              "missing"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "metal": [
+            [
+              0.08,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "caution",
+        "verdict_reasons": [
+          "50% of surveyed cells not assessed"
+        ],
+        "coverage": {
+          "surveyed": 4,
+          "assessed": 2
+        },
+        "matrix": {
+          "I": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 0,
+            "y": 0,
+            "assessed": false,
+            "kind": null,
+            "score": 0,
+            "probability": null,
+            "severity": null,
+            "level": null,
+            "label": null,
+            "reasons": [
+              "Metal sensor error"
+            ]
+          },
+          {
+            "x": 1,
+            "y": 0,
+            "assessed": false,
+            "kind": null,
+            "score": 0,
+            "probability": null,
+            "severity": null,
+            "level": null,
+            "label": null,
+            "reasons": [
+              "No metal reading"
+            ]
+          }
+        ],
+        "areas": []
+      }
+    },
+    {
+      "name": "rounding",
+      "description": "Values with more than two decimals round half up to hundredths.",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "metal": [
+            [
+              0.745,
+              "ok"
+            ]
+          ],
+          "voc": [
+            [
+              0.08,
+              "ok"
+            ]
+          ]
+        }
+      ],
+      "expected": {
+        "rules_version": "risk-1",
+        "verdict": "no_go",
+        "verdict_reasons": [
+          "1 suspected explosive hazard"
+        ],
+        "coverage": {
+          "surveyed": 1,
+          "assessed": 1
+        },
+        "matrix": {
+          "I": [
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "II": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "III": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "IV": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "cells": [
+          {
+            "x": 0,
+            "y": 0,
+            "assessed": true,
+            "kind": "explosive",
+            "score": 75,
+            "probability": "B",
+            "severity": "I",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "reasons": [
+              "Metal signal 0.75"
+            ]
+          }
+        ],
+        "areas": [
+          {
+            "id": "A1",
+            "kind": "explosive",
+            "level": "EH",
+            "label": "Suspected explosive hazard",
+            "action": "Do not enter. Mark and bypass, and request EOD clearance.",
+            "cells": [
+              [
+                0,
+                0
+              ]
+            ],
+            "centroid": [
+              0.0,
+              0.0
+            ],
+            "peak": [
+              0,
+              0
+            ],
+            "score": 75,
+            "reasons": [
+              "Metal signal 0.75"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
