@@ -107,6 +107,7 @@ export class ModelScene {
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     this.renderer.setClearColor(PAPER)
+    this.renderer.domElement.style.background = '#f4f4f1'
     container.appendChild(this.renderer.domElement)
     this.labels.domElement.style.position = 'absolute'
     this.labels.domElement.style.inset = '0'
@@ -158,8 +159,10 @@ export class ModelScene {
     this.resize()
     const loop = () => {
       if (this.disposed) return
-      this.frame()
+      // Schedule first: one failed frame (a lost GPU context) must not stop the loop for good.
       this.raf = requestAnimationFrame(loop)
+      if (this.renderer.getContext().isContextLost()) return
+      this.frame()
     }
     loop()
   }
@@ -210,6 +213,8 @@ export class ModelScene {
       m?.dispose?.()
     })
     this.renderer.dispose()
+    // Release the GPU context now: browsers cap live contexts and drop new ones past the limit.
+    this.renderer.forceContextLoss()
     this.renderer.domElement.remove()
     this.labels.domElement.remove()
   }
@@ -435,8 +440,15 @@ export class ModelScene {
 
   private buildSlot(slot: SlotId) {
     const part = this.parts.get(slot) ?? this.newPart(slot)
-    for (const p of part.pieces) part.group.remove(p.obj)
+    // Free the previous module's GPU buffers and materials before drawing the new one.
+    for (const p of part.pieces) {
+      part.group.remove(p.obj)
+      p.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose())
+    }
+    for (const m of [...part.inks, ...part.fills]) m.dispose()
     part.pieces = []
+    part.inks = []
+    part.fills = []
     const v = this.variants[slot]
     if (slot === 'metal') part.group.position.y = v === 'magnetometer' ? LIFT : 0
     if (v !== EMPTY) {

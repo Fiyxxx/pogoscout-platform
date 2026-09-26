@@ -11,16 +11,24 @@ type Props = {
   onSelect: (key: string) => void
 }
 
+// Checked once per page load. The probe context is released straight away: browsers cap the
+// number of live WebGL contexts, and a leaked one per mount eventually starves the real map.
+let webgl: boolean | undefined
 function webglSupported(): boolean {
-  try {
-    return !!document.createElement('canvas').getContext('webgl2')
-  } catch {
-    return false
+  if (webgl === undefined) {
+    try {
+      const gl = document.createElement('canvas').getContext('webgl2')
+      webgl = !!gl
+      gl?.getExtension('WEBGL_lose_context')?.loseContext()
+    } catch {
+      webgl = false
+    }
   }
+  return webgl
 }
 
 export default function MissionMap({ data, layer, selected, onSelect }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<MissionScene | null>(null)
   const drag = useRef<{ x: number; y: number; moved: boolean; pan: boolean } | null>(null)
   const [view, setView] = useState<ViewMode>('3d')
@@ -28,8 +36,12 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
   const [supported] = useState(webglSupported)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const host = hostRef.current
+    if (!host) return
+    // A fresh canvas per mount: a disposed scene releases its context, so the canvas can't be reused.
+    const canvas = document.createElement('canvas')
+    canvas.style.cssText = 'width: 100%; height: 100%; display: block'
+    host.appendChild(canvas)
     const scene = new MissionScene(canvas)
     sceneRef.current = scene
     const observer = new ResizeObserver(([entry]) => scene.resize(entry.contentRect.width, entry.contentRect.height))
@@ -37,6 +49,7 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
     return () => {
       observer.disconnect()
       scene.dispose()
+      canvas.remove()
       sceneRef.current = null
     }
   }, [])
@@ -58,10 +71,11 @@ export default function MissionMap({ data, layer, selected, onSelect }: Props) {
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <canvas
-        ref={canvasRef}
+      <div
+        ref={hostRef}
+        role="img"
         aria-label="Mission map"
-        style={{ width: '100%', height: '100%', display: 'block', cursor: 'grab', touchAction: 'none' }}
+        style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
         onPointerDown={(e) => {
           drag.current = { x: e.clientX, y: e.clientY, moved: false, pan: e.button === 2 || e.shiftKey || view === '2d' }
           e.currentTarget.setPointerCapture(e.pointerId)

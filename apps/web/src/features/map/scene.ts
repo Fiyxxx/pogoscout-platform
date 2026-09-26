@@ -215,7 +215,7 @@ export class MissionScene {
     this.renderer.setClearColor(0x0a0a0a)
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
 
     const scene = this.scene
     scene.fog = this.fog
@@ -261,8 +261,10 @@ export class MissionScene {
 
     const loop = () => {
       if (this.disposed) return
-      this.frame()
+      // Schedule first: one failed frame (a lost GPU context) must not stop the loop for good.
       this.raf = requestAnimationFrame(loop)
+      if (this.renderer.getContext().isContextLost()) return
+      this.frame()
     }
     loop()
   }
@@ -387,6 +389,8 @@ export class MissionScene {
       else material?.dispose()
     })
     this.renderer.dispose()
+    // Release the GPU context now: browsers cap live contexts and drop new ones past the limit.
+    this.renderer.forceContextLoss()
   }
 
   private texturedLayer() {
