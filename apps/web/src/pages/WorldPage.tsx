@@ -197,7 +197,7 @@ const HEAT_OPTIONS: { id: HeatLayer; name: string }[] = [
 ]
 
 const HEAT_LEGEND: Record<Exclude<HeatLayer, 'off'>, { gradient: string; low: string; high: string }> = {
-  risk: { gradient: 'linear-gradient(90deg, rgba(255,196,0,0.35), rgba(255,140,20,0.7), #ff5a1f, #ff3a14)', low: 'Low risk', high: 'Extremely high' },
+  risk: { gradient: 'linear-gradient(90deg, rgba(255,196,0,0.35), rgba(255,140,20,0.7), #ff5a1f, #ff3a14)', low: 'P(hazard) low', high: 'Near certain' },
   metal: { gradient: 'linear-gradient(90deg, rgba(255,90,31,0.15), rgba(255,90,31,0.6), #ff5a1f, #ffd2bd)', low: 'Metal signal 0.30', high: 'Stronger' },
   voc: { gradient: 'linear-gradient(90deg, rgba(160,200,255,0.2), rgba(190,215,255,0.55), #e1ebff, #ffffff)', low: 'VOC signal 0.30', high: 'Stronger' },
 }

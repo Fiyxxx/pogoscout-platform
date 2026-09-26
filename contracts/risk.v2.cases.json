@@ -1,5 +1,128 @@
 {
-  "rules_version": "risk-1",
+  "rules_version": "risk-2",
+  "posterior": {
+    "-60": 0,
+    "-59": 0,
+    "-58": 0,
+    "-57": 0,
+    "-56": 0,
+    "-55": 0,
+    "-54": 0,
+    "-53": 0,
+    "-52": 0,
+    "-51": 0,
+    "-50": 0,
+    "-49": 0,
+    "-48": 0,
+    "-47": 0,
+    "-46": 0,
+    "-45": 0,
+    "-44": 0,
+    "-43": 0,
+    "-42": 0,
+    "-41": 0,
+    "-40": 0,
+    "-39": 0,
+    "-38": 0,
+    "-37": 0,
+    "-36": 0,
+    "-35": 0,
+    "-34": 0,
+    "-33": 0,
+    "-32": 0,
+    "-31": 0,
+    "-30": 0,
+    "-29": 0,
+    "-28": 0,
+    "-27": 0,
+    "-26": 0,
+    "-25": 0,
+    "-24": 0,
+    "-23": 0,
+    "-22": 1,
+    "-21": 1,
+    "-20": 1,
+    "-19": 1,
+    "-18": 2,
+    "-17": 2,
+    "-16": 2,
+    "-15": 3,
+    "-14": 4,
+    "-13": 5,
+    "-12": 6,
+    "-11": 7,
+    "-10": 9,
+    "-9": 11,
+    "-8": 14,
+    "-7": 17,
+    "-6": 20,
+    "-5": 24,
+    "-4": 28,
+    "-3": 33,
+    "-2": 39,
+    "-1": 44,
+    "0": 50,
+    "1": 56,
+    "2": 61,
+    "3": 67,
+    "4": 72,
+    "5": 76,
+    "6": 80,
+    "7": 83,
+    "8": 86,
+    "9": 89,
+    "10": 91,
+    "11": 93,
+    "12": 94,
+    "13": 95,
+    "14": 96,
+    "15": 97,
+    "16": 98,
+    "17": 98,
+    "18": 98,
+    "19": 99,
+    "20": 99,
+    "21": 99,
+    "22": 99,
+    "23": 100,
+    "24": 100,
+    "25": 100,
+    "26": 100,
+    "27": 100,
+    "28": 100,
+    "29": 100,
+    "30": 100,
+    "31": 100,
+    "32": 100,
+    "33": 100,
+    "34": 100,
+    "35": 100,
+    "36": 100,
+    "37": 100,
+    "38": 100,
+    "39": 100,
+    "40": 100,
+    "41": 100,
+    "42": 100,
+    "43": 100,
+    "44": 100,
+    "45": 100,
+    "46": 100,
+    "47": 100,
+    "48": 100,
+    "49": 100,
+    "50": 100,
+    "51": 100,
+    "52": 100,
+    "53": 100,
+    "54": 100,
+    "55": 100,
+    "56": 100,
+    "57": 100,
+    "58": 100,
+    "59": 100,
+    "60": 100
+  },
   "cases": [
     {
       "name": "clean",
@@ -151,7 +274,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "go",
         "verdict_reasons": [
           "No indications in surveyed cells"
@@ -344,7 +467,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -389,13 +512,15 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 91,
+            "db": 8,
+            "p": 86,
             "probability": "A",
             "severity": "I",
             "level": "EH",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.91"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.91: +25 dB"
             ]
           }
         ],
@@ -420,9 +545,10 @@
               1,
               1
             ],
-            "score": 91,
+            "p": 86,
             "reasons": [
-              "Metal signal 0.91"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.91: +25 dB"
             ]
           }
         ]
@@ -578,7 +704,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -591,8 +717,8 @@
           "I": [
             0,
             0,
-            0,
             1,
+            0,
             0
           ],
           "II": [
@@ -623,13 +749,15 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 56,
-            "probability": "D",
+            "db": -1,
+            "p": 44,
+            "probability": "C",
             "severity": "I",
             "level": "H",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.56"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.56: +16 dB"
             ]
           }
         ],
@@ -654,9 +782,10 @@
               1,
               1
             ],
-            "score": 56,
+            "p": 44,
             "reasons": [
-              "Metal signal 0.56"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.56: +16 dB"
             ]
           }
         ]
@@ -812,10 +941,10 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "caution",
         "verdict_reasons": [
-          "1 weak metal reading to re-survey"
+          "1 metal anomaly to re-survey"
         ],
         "coverage": {
           "surveyed": 9,
@@ -857,13 +986,15 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 38,
+            "db": -11,
+            "p": 7,
             "probability": "E",
             "severity": "I",
             "level": "M",
             "label": "Metal anomaly",
             "reasons": [
-              "Metal signal 0.38"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.38: +6 dB"
             ]
           }
         ],
@@ -872,7 +1003,7 @@
     },
     {
       "name": "weak_metal_seen_twice",
-      "description": "Faint metal on both visits is still faint: no confirmation bonus.",
+      "description": "Faint metal on both visits: the revisit counts half, so it stays an anomaly.",
       "cells": [
         {
           "x": 0,
@@ -1024,10 +1155,10 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "caution",
         "verdict_reasons": [
-          "1 weak metal reading to re-survey"
+          "1 metal anomaly to re-survey"
         ],
         "coverage": {
           "surveyed": 9,
@@ -1069,14 +1200,16 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 44,
+            "db": -8,
+            "p": 14,
             "probability": "E",
             "severity": "I",
             "level": "M",
             "label": "Metal anomaly",
             "reasons": [
-              "Metal signal 0.44",
-              "Metal on all 2 visits"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.44: +6 dB",
+              "Metal 0.41 on revisit: +3 dB"
             ]
           }
         ],
@@ -1085,7 +1218,7 @@
     },
     {
       "name": "confirmed_on_revisit",
-      "description": "A detection read again on the second visit gains confidence.",
+      "description": "A detection read again on the second visit adds half its evidence again.",
       "cells": [
         {
           "x": 0,
@@ -1237,7 +1370,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -1248,8 +1381,8 @@
         },
         "matrix": {
           "I": [
-            0,
             1,
+            0,
             0,
             0,
             0
@@ -1282,14 +1415,16 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 81,
-            "probability": "B",
+            "db": 13,
+            "p": 95,
+            "probability": "A",
             "severity": "I",
             "level": "EH",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.71",
-              "Metal confirmed on all 2 visits"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.71: +22 dB",
+              "Metal 0.66 on revisit: +8 dB"
             ]
           }
         ],
@@ -1314,10 +1449,11 @@
               1,
               1
             ],
-            "score": 81,
+            "p": 95,
             "reasons": [
-              "Metal signal 0.71",
-              "Metal confirmed on all 2 visits"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.71: +22 dB",
+              "Metal 0.66 on revisit: +8 dB"
             ]
           }
         ]
@@ -1325,7 +1461,7 @@
     },
     {
       "name": "not_repeated",
-      "description": "Metal on one visit but not the next loses confidence.",
+      "description": "Metal on one visit and background on the next: the revisit weighs against.",
       "cells": [
         {
           "x": 0,
@@ -1477,7 +1613,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -1522,14 +1658,16 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 56,
+            "db": -5,
+            "p": 24,
             "probability": "D",
             "severity": "I",
             "level": "H",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.66",
-              "Metal on 1 of 2 visits"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.66: +16 dB",
+              "Metal 0.05 on revisit: \u22124 dB"
             ]
           }
         ],
@@ -1554,10 +1692,11 @@
               1,
               1
             ],
-            "score": 56,
+            "p": 24,
             "reasons": [
-              "Metal signal 0.66",
-              "Metal on 1 of 2 visits"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.66: +16 dB",
+              "Metal 0.05 on revisit: \u22124 dB"
             ]
           }
         ]
@@ -1713,7 +1852,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -1726,8 +1865,8 @@
           "I": [
             0,
             0,
-            0,
             1,
+            0,
             0
           ],
           "II": [
@@ -1739,8 +1878,8 @@
           ],
           "III": [
             0,
-            0,
             1,
+            0,
             0,
             0
           ],
@@ -1758,14 +1897,16 @@
             "y": 1,
             "assessed": true,
             "kind": "explosive",
-            "score": 55,
-            "probability": "D",
+            "db": -3,
+            "p": 33,
+            "probability": "C",
             "severity": "I",
             "level": "H",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.45",
-              "VOC 0.62 at or beside this cell"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.45: +6 dB",
+              "VOC 0.62 at or beside this cell: +8 dB"
             ]
           },
           {
@@ -1773,13 +1914,15 @@
             "y": 1,
             "assessed": true,
             "kind": "activity",
-            "score": 62,
-            "probability": "C",
+            "db": 1,
+            "p": 56,
+            "probability": "B",
             "severity": "III",
             "level": "M",
             "label": "Recent activity cue",
             "reasons": [
-              "VOC signal 0.62",
+              "Prior 3% of cells: \u221215 dB",
+              "VOC 0.62: +16 dB",
               "No metal signal"
             ]
           }
@@ -1809,10 +1952,11 @@
               1,
               1
             ],
-            "score": 55,
+            "p": 33,
             "reasons": [
-              "Metal signal 0.45",
-              "VOC 0.62 at or beside this cell",
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.45: +6 dB",
+              "VOC 0.62 at or beside this cell: +8 dB",
               "2 cells in this area"
             ]
           }
@@ -1969,7 +2113,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "caution",
         "verdict_reasons": [
           "1 recent activity area"
@@ -2014,13 +2158,15 @@
             "y": 0,
             "assessed": true,
             "kind": "activity",
-            "score": 93,
+            "db": 7,
+            "p": 83,
             "probability": "A",
             "severity": "III",
             "level": "H",
             "label": "Recent activity cue",
             "reasons": [
-              "VOC signal 0.93",
+              "Prior 3% of cells: \u221215 dB",
+              "VOC 0.93: +22 dB",
               "No metal signal"
             ]
           }
@@ -2046,9 +2192,10 @@
               0,
               0
             ],
-            "score": 93,
+            "p": 83,
             "reasons": [
-              "VOC signal 0.93",
+              "Prior 3% of cells: \u221215 dB",
+              "VOC 0.93: +22 dB",
               "No metal signal"
             ]
           }
@@ -2057,7 +2204,7 @@
     },
     {
       "name": "pattern",
-      "description": "Evenly spaced detections: the middle one gains the pattern bonus.",
+      "description": "Evenly spaced detections: the middle one gains the pattern evidence.",
       "cells": [
         {
           "x": 0,
@@ -2141,7 +2288,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -2152,10 +2299,10 @@
         },
         "matrix": {
           "I": [
-            0,
-            0,
             1,
+            0,
             2,
+            0,
             0
           ],
           "II": [
@@ -2186,13 +2333,15 @@
             "y": 0,
             "assessed": true,
             "kind": "explosive",
-            "score": 58,
-            "probability": "D",
+            "db": -1,
+            "p": 44,
+            "probability": "C",
             "severity": "I",
             "level": "H",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.58"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.58: +16 dB"
             ]
           },
           {
@@ -2200,14 +2349,16 @@
             "y": 0,
             "assessed": true,
             "kind": "explosive",
-            "score": 70,
-            "probability": "C",
+            "db": 9,
+            "p": 89,
+            "probability": "A",
             "severity": "I",
-            "level": "H",
+            "level": "EH",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.60",
-              "2 more metal hits within 2 cells"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.60: +16 dB",
+              "2 more metal detections within 2 cells: +10 dB"
             ]
           },
           {
@@ -2215,13 +2366,15 @@
             "y": 0,
             "assessed": true,
             "kind": "explosive",
-            "score": 57,
-            "probability": "D",
+            "db": -1,
+            "p": 44,
+            "probability": "C",
             "severity": "I",
             "level": "H",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.57"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.57: +16 dB"
             ]
           }
         ],
@@ -2229,7 +2382,7 @@
           {
             "id": "A1",
             "kind": "explosive",
-            "level": "H",
+            "level": "EH",
             "label": "Suspected explosive hazard",
             "action": "Do not enter. Mark and bypass, and request EOD clearance.",
             "cells": [
@@ -2254,10 +2407,11 @@
               2,
               0
             ],
-            "score": 70,
+            "p": 89,
             "reasons": [
-              "Metal signal 0.60",
-              "2 more metal hits within 2 cells",
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.60: +16 dB",
+              "2 more metal detections within 2 cells: +10 dB",
               "3 cells in this area"
             ]
           }
@@ -2382,7 +2536,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "2 suspected explosive hazards"
@@ -2427,13 +2581,15 @@
             "y": 0,
             "assessed": true,
             "kind": "explosive",
-            "score": 62,
+            "db": -1,
+            "p": 44,
             "probability": "C",
             "severity": "I",
             "level": "H",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.62"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.62: +16 dB"
             ]
           },
           {
@@ -2441,13 +2597,15 @@
             "y": 0,
             "assessed": true,
             "kind": "explosive",
-            "score": 95,
+            "db": 8,
+            "p": 86,
             "probability": "A",
             "severity": "I",
             "level": "EH",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.95"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.95: +25 dB"
             ]
           }
         ],
@@ -2472,9 +2630,10 @@
               6,
               0
             ],
-            "score": 95,
+            "p": 86,
             "reasons": [
-              "Metal signal 0.95"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.95: +25 dB"
             ]
           },
           {
@@ -2497,9 +2656,10 @@
               0,
               0
             ],
-            "score": 62,
+            "p": 44,
             "reasons": [
-              "Metal signal 0.62"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.62: +16 dB"
             ]
           }
         ]
@@ -2575,7 +2735,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "caution",
         "verdict_reasons": [
           "50% of surveyed cells not assessed"
@@ -2620,7 +2780,8 @@
             "y": 0,
             "assessed": false,
             "kind": null,
-            "score": 0,
+            "db": 0,
+            "p": 0,
             "probability": null,
             "severity": null,
             "level": null,
@@ -2634,7 +2795,8 @@
             "y": 0,
             "assessed": false,
             "kind": null,
-            "score": 0,
+            "db": 0,
+            "p": 0,
             "probability": null,
             "severity": null,
             "level": null,
@@ -2669,7 +2831,7 @@
         }
       ],
       "expected": {
-        "rules_version": "risk-1",
+        "rules_version": "risk-2",
         "verdict": "no_go",
         "verdict_reasons": [
           "1 suspected explosive hazard"
@@ -2714,13 +2876,15 @@
             "y": 0,
             "assessed": true,
             "kind": "explosive",
-            "score": 75,
+            "db": 5,
+            "p": 76,
             "probability": "B",
             "severity": "I",
             "level": "EH",
             "label": "Suspected explosive hazard",
             "reasons": [
-              "Metal signal 0.75"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.75: +22 dB"
             ]
           }
         ],
@@ -2745,9 +2909,10 @@
               0,
               0
             ],
-            "score": 75,
+            "p": 76,
             "reasons": [
-              "Metal signal 0.75"
+              "Prior 2% of cells: \u221217 dB",
+              "Metal 0.75: +22 dB"
             ]
           }
         ]

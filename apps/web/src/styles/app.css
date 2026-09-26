@@ -200,3 +200,8 @@ input::placeholder { color: var(--faint); }
 .map-hotspot-tip strong { font-weight: 600; margin-right: 6px; }
 .verdict-btn { background: transparent; cursor: pointer; font-size: 12px; padding: 5px 10px; }
 .verdict-btn:hover { background: var(--surface-2); }
+.area-card-p { font: 12px var(--font-mono); color: var(--text-2); }
+.ledger { display: flex; flex-direction: column; border-top: 1px solid var(--line-soft); }
+.ledger-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--line-soft); }
+.ledger-row .mono { font-size: 12px; white-space: nowrap; color: var(--muted); }
+.ledger-row .mono[data-sign='plus'] { color: var(--signal); }

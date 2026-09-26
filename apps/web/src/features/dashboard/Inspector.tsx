@@ -6,7 +6,7 @@ import { Capture, Overlay } from '../../components/Capture'
 import { classificationText, isLowConfidence, latestObservation, primaryFlag, sensorText } from '../../lib/cells'
 import { clock, confidence, pad3, xy } from '../../lib/format'
 import { materialName } from '../../lib/materials'
-import { LEVEL_COLORS, LEVEL_NAMES, strongest, type CellRisk, type RiskArea } from '../../lib/risk'
+import { LEVEL_COLORS, LEVEL_NAMES, probText, signed, strongest, type CellRisk, type RiskArea } from '../../lib/risk'
 
 type Props = {
   mission: MissionSummary
@@ -162,17 +162,37 @@ function RiskBlock({ risk }: { risk: CellRisk | undefined }) {
             <span style={{ fontSize: 16, fontWeight: 600 }}>{risk.label}</span>
             <span style={{ fontSize: 13, fontWeight: 600, color: LEVEL_COLORS[risk.level], whiteSpace: 'nowrap' }}>{LEVEL_NAMES[risk.level]}</span>
           </span>
-          <ul className="risk-reasons">
-            {risk.reasons.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
+          <span className="mono" style={{ fontSize: 13, color: 'var(--text-2)' }}>
+            P {probText(risk.p)} from {signed(risk.db)} total
+          </span>
+          <Ledger reasons={risk.reasons} />
         </>
       ) : (
         <span style={{ fontSize: 16, fontWeight: 600, color: assessed ? 'var(--text-2)' : 'var(--muted)' }}>
           {assessed ? 'No indication' : `Not assessed: ${risk?.reasons[0] ?? ''}`}
         </span>
       )}
+    </div>
+  )
+}
+
+/** Evidence lines ("Metal 0.82: +22 dB") as a ledger: what each one weighed, prior first. */
+function Ledger({ reasons }: { reasons: string[] }) {
+  return (
+    <div className="ledger">
+      {reasons.map((r) => {
+        const at = r.lastIndexOf(': ')
+        const text = at < 0 ? r : r.slice(0, at)
+        const db = at < 0 ? '' : r.slice(at + 2)
+        return (
+          <div key={r} className="ledger-row">
+            <span>{text}</span>
+            <span className="mono" data-sign={db.startsWith('+') ? 'plus' : db ? 'minus' : undefined}>
+              {db}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -199,16 +219,12 @@ function AreaView({ area, onClose, onPeak }: { area: RiskArea; onClose: () => vo
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
         <Fact label="Cells" value={area.cells.length} />
-        <Fact label="Evidence" value={(area.score / 100).toFixed(2)} divider />
+        <Fact label="Probability" value={probText(area.p)} divider />
         <Fact label="Peak cell" value={xy({ x: area.peak[0], y: area.peak[1] })} divider />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span className="key">Why</span>
-        <ul className="risk-reasons" style={{ fontSize: 14 }}>
-          {area.reasons.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
+        <span className="key">Evidence at the peak cell</span>
+        <Ledger reasons={area.reasons} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 14, border: '1px solid var(--line)' }}>
         <span className="key">Action</span>

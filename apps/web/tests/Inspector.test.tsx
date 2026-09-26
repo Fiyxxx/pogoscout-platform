@@ -54,7 +54,9 @@ test('inspector explains a cell rating with its reasons', () => {
   renderIn(<Inspector mission={mission()} cell={c} {...riskProps} cellRisk={risk} />)
   expect(screen.getByText('Suspected explosive hazard')).toBeInTheDocument()
   expect(screen.getByText('Extremely high')).toBeInTheDocument()
-  expect(screen.getByText('Metal signal 0.91')).toBeInTheDocument()
+  expect(screen.getByText('Metal 0.91')).toBeInTheDocument()
+  expect(screen.getByText('+25 dB')).toBeInTheDocument()
+  expect(screen.getByText('P 0.86 from +8 dB total')).toBeInTheDocument()
   expect(screen.getByText('0.91')).toBeInTheDocument()
 })
 

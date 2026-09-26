@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
 import type { WorldArea, WorldMission } from '../../api/types'
 import { cellBounds, cellRing, gridToLngLat } from '../../lib/geo'
 import { isMaterial, MATERIAL_COLORS } from '../../lib/materials'
-import { LEVEL_NAMES, VERDICT_NAMES } from '../../lib/risk'
+import { LEVEL_NAMES, probText, VERDICT_NAMES } from '../../lib/risk'
 
 export type HeatLayer = 'risk' | 'metal' | 'voc' | 'off'
 export type WorldLayers = { heat: HeatLayer; areas: boolean; footprints: boolean }
@@ -26,8 +26,6 @@ setWorkerUrl(maplibreWorkerUrl)
 const TERRAIN_EXAGGERATION = 1.5
 const OVERVIEW = { center: [103.81, 1.318] as [number, number], zoom: 11.15, pitch: 50, bearing: -12 }
 const SIGNAL = '#ff5a1f'
-// Heat weight per risk rank (1 low .. 4 extremely high); not-assessed cells add no heat.
-const RISK_WEIGHT = [0, 0.12, 0.4, 0.75, 1]
 // Area markers appear once the map is close enough to tell them apart.
 const AREA_MIN_ZOOM = 13.2
 
@@ -84,7 +82,9 @@ function toGeoJSON(missions: WorldMission[]) {
       // Background readings (below 0.30) add no heat; stronger signals weigh by their strength.
       if (metal >= 0.3) detections.push({ type: 'Feature', properties: { kind: 'metal', weight: metal, hit: metal >= 0.5 }, geometry: point })
       if (voc >= 0.3) detections.push({ type: 'Feature', properties: { kind: 'voc', weight: voc, hit: voc >= 0.5 }, geometry: point })
-      if (risk > 0) detections.push({ type: 'Feature', properties: { kind: 'risk', weight: RISK_WEIGHT[risk] }, geometry: point })
+      // Risk heat is the posterior probability of a hazard (half for an activity cue), so the
+      // glow follows the evidence itself; not-assessed cells (-1) add none.
+      if (risk > 0) detections.push({ type: 'Feature', properties: { kind: 'risk', weight: risk }, geometry: point })
     }
     const [[west, south], [east, north]] = cellBounds(w.geo, w.cells.map(([x, y]) => ({ x, y })))
     outlines.push({
@@ -233,11 +233,12 @@ function areaCard(w: WorldMission, a: WorldArea, pinned: boolean, onOpen: () => 
   add(head, 'span', 'area-card-level', `${LEVEL_NAMES[a.level]} risk`)
   add(head, 'span', 'area-card-id', `${w.mission.id} ${a.id}`)
   add(card, 'div', 'area-card-title', a.label)
+  add(card, 'div', 'area-card-p', `P ${probText(a.p)} ${a.kind === 'explosive' ? 'of a hazard' : 'of recent activity'}`)
   if (!pinned) {
     add(card, 'div', 'area-card-hint', 'Click for details')
     return card
   }
-  add(card, 'div', 'area-card-key', 'Why')
+  add(card, 'div', 'area-card-key', 'Evidence')
   const list = add(card, 'ul', 'area-card-why')
   for (const r of a.reasons) add(list, 'li', '', r)
   add(card, 'div', 'area-card-key', 'Action')

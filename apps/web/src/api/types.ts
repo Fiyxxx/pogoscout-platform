@@ -145,7 +145,8 @@ export type GeoAnchor = { lat: number; lon: number; heading_deg: number; cell_m:
 
 /**
  * Compact cell for the theatre view: [x, y, material label or null, strongest metal 0..1,
- * strongest VOC 0..1, risk rank 0 none, 1 low, 2 medium, 3 high, 4 extremely high, -1 not assessed].
+ * strongest VOC 0..1, risk heat: posterior probability of a hazard (half for an activity cue),
+ * 0 with no indication, -1 not assessed].
  */
 export type WorldCell = [number, number, string | null, number, number, number]
 

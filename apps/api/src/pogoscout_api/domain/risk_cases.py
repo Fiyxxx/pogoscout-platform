@@ -1,4 +1,4 @@
-"""Contract cases for the risk rules, exported to `contracts/risk.v1.cases.json`.
+"""Contract cases for the risk rules, exported to `contracts/risk.v2.cases.json`.
 
 Each case is a small grid of per-visit readings plus the assessment the rules must return. The API
 and the web client both check every case, so the two implementations cannot drift apart.
@@ -44,17 +44,17 @@ def _cases() -> list[tuple[str, str, list[dict]]]:
         ),
         (
             "weak_metal_seen_twice",
-            "Faint metal on both visits is still faint: no confirmation bonus.",
+            "Faint metal on both visits: the revisit counts half, so it stays an anomaly.",
             _field(3, 3, **{"1,1": _cell(1, 1, metal=((0.41, OK), (0.44, OK)))}),
         ),
         (
             "confirmed_on_revisit",
-            "A detection read again on the second visit gains confidence.",
+            "A detection read again on the second visit adds half its evidence again.",
             _field(3, 3, **{"1,1": _cell(1, 1, metal=((0.66, OK), (0.71, OK)))}),
         ),
         (
             "not_repeated",
-            "Metal on one visit but not the next loses confidence.",
+            "Metal on one visit and background on the next: the revisit weighs against.",
             _field(3, 3, **{"1,1": _cell(1, 1, metal=((0.66, OK), (0.05, OK)))}),
         ),
         (
@@ -76,7 +76,7 @@ def _cases() -> list[tuple[str, str, list[dict]]]:
         ),
         (
             "pattern",
-            "Evenly spaced detections: the middle one gains the pattern bonus.",
+            "Evenly spaced detections: the middle one gains the pattern evidence.",
             _field(
                 5,
                 1,
@@ -131,6 +131,11 @@ def _readings(cells: list[dict]) -> list[risk.CellReadings]:
 def build() -> dict:
     return {
         "rules_version": risk.RULES_VERSION,
+        # Decibans -> probability in hundredths, over the whole clamped range: the client must
+        # convert every value identically.
+        "posterior": {
+            str(db): risk.posterior(db) for db in range(-risk.DB_LIMIT, risk.DB_LIMIT + 1)
+        },
         "cases": [
             {
                 "name": name,

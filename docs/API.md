@@ -126,43 +126,57 @@ Quality rules (first match wins): `conflicting` if a conflicting duplicate was r
 ## Risk assessment
 
 ### `GET /missions/{mission_id}/risk` → `RiskAssessment`
-Rules `risk-1` (`apps/api/src/pogoscout_api/domain/risk.py`, ported line for line to
-`apps/web/src/lib/risk.ts`; both run `contracts/risk.v1.cases.json`). Deterministic and explainable:
-every rated cell and area carries the reasons behind it.
+Rules `risk-2`: Bayesian evidence fusion (`apps/api/src/pogoscout_api/domain/risk.py`, ported line
+for line to `apps/web/src/lib/risk.ts`; both run `contracts/risk.v2.cases.json`, which also pins the
+deciban to probability table). Deterministic and explainable: every rating carries its evidence.
 
-- **Evidence score** (hundredths, 0 to 100): the strongest valid metal reading, +10 when a detection
-  (0.50+) is confirmed on every visit, -10 when some visits read nothing, +10 when VOC at detection
-  strength reads at or beside the cell, +10 when two or more other metal detections lie within two
-  cells. A cell with VOC and no metal is scored on its VOC signal. Only detection-strength readings
-  corroborate.
-- **Likelihood** from the score: 90+ A Frequent, 75+ B Likely, 60+ C Occasional, 50+ D Seldom, else
-  E Unlikely.
-- **Severity**: metal is a suspected explosive hazard (I Catastrophic); VOC alone is a recent
-  activity cue (III Moderate). Sensors report signal strength, so nothing names a mine or a person.
-- **Level** from the Army risk matrix (ATP 5-19): EH extremely high, H high, M medium, L low.
-- **Not assessed**: a cell with no valid metal reading. Unknown is never shown as safe.
-- **Hazard areas**: cells at M or above with a score of 50+, joined when up to two cells apart.
-  Weak readings stay single cells to re-survey.
-- **Verdict**: `no_go` with any explosive area at H or EH; `caution` with a metal anomaly area, an
-  activity area, weak metal readings or 5%+ of cells not assessed; else `go`.
+- **Hypotheses** per cell, each with a prior: H, a suspected explosive hazard (2% of cells,
+  −17 dB); A, recent activity (3%, −15 dB).
+- **Evidence** in decibans, dB = 10 log10 of the likelihood ratio P(reading | H) / P(reading | not H);
+  +10 dB multiplies the odds by 10. Posterior dB = prior + evidence, P = 1 / (1 + 10^(−dB/10)).
+- **Sensor models** (assumed until the detector is calibrated on known targets):
+
+  | Metal signal | P given H | P given not H | Weight |
+  |---|---|---|---|
+  | 0.85+ | 0.15 | 0.0005 | +25 dB |
+  | 0.70 to 0.84 | 0.25 | 0.0015 | +22 dB |
+  | 0.50 to 0.69 | 0.30 | 0.008 | +16 dB |
+  | 0.30 to 0.49 | 0.15 | 0.04 | +6 dB |
+  | below 0.30 | 0.15 | 0.95 | −8 dB |
+
+  VOC for A: 0.85+ +22, 0.70+ +20, 0.50+ +16, 0.30+ +8, below −7 dB. Context for H: a VOC
+  detection at or beside the cell +8 dB (P 0.20 vs 0.03); two or more other metal detections within
+  two cells +10 dB (0.40 vs 0.04). Absence of VOC is uninformative.
+- **Revisits**: the strongest reading counts in full, each further visit half (repeat readings of
+  one object, hazard or clutter, are correlated, not independent).
+- **Likelihood grade** from P: 80%+ A Frequent, 50%+ B Likely, 25%+ C Occasional, 15%+ D Seldom,
+  else E Unlikely. **Severity**: H is I Catastrophic, A is III Moderate. **Level** from the Army
+  risk matrix (ATP 5-19): EH, H, M, L.
+- A hazard cell with P 15%+ (High or above) is a **suspected explosive hazard**; below that a
+  **metal anomaly** to re-survey. **Not assessed**: no valid metal reading; never shown as safe.
+- **Hazard areas** join cells at M or above with P 15%+, up to two cells apart.
+- **Verdict**: `no_go` with any explosive area at H or EH; `caution` with an activity area, metal
+  anomalies or 5%+ of cells not assessed; else `go`.
 
 ```jsonc
 {
-  "rules_version": "risk-1",
+  "rules_version": "risk-2",
   "verdict": "no_go",
-  "verdict_reasons": ["6 suspected explosive hazards", "19 weak metal readings to re-survey"],
+  "verdict_reasons": ["7 suspected explosive hazards", "16 metal anomalies to re-survey"],
   "coverage": {"surveyed": 1404, "assessed": 1385},
   "matrix": {"I": [13, 7, 7, 0, 19], "II": [0, 0, 0, 0, 0], "III": [2, 1, 5, 3, 15], "IV": [0, 0, 0, 0, 0]},
   "cells": [  // only cells with an indication or not assessed
-    {"x": 10, "y": 6, "assessed": true, "kind": "explosive", "score": 100, "probability": "A",
+    {"x": 10, "y": 6, "assessed": true, "kind": "explosive", "db": 18, "p": 98, "probability": "A",
      "severity": "I", "level": "EH", "label": "Suspected explosive hazard",
-     "reasons": ["Metal signal 0.90", "6 more metal hits within 2 cells"]}
+     "reasons": ["Prior 2% of cells: −17 dB", "Metal 0.90: +25 dB",
+                 "6 more metal detections within 2 cells: +10 dB"]}
   ],
   "areas": [
     {"id": "A1", "kind": "explosive", "level": "EH", "label": "Suspected explosive hazard",
      "action": "Do not enter. Mark and bypass, and request EOD clearance.",
-     "cells": [[10, 6], [11, 6]], "centroid": [10.44, 6.55], "peak": [10, 6], "score": 100,
-     "reasons": ["Metal signal 0.90", "6 more metal hits within 2 cells", "9 cells in this area"]}
+     "cells": [[10, 6], [11, 6]], "centroid": [10.44, 6.55], "peak": [10, 6], "p": 98,
+     "reasons": ["Prior 2% of cells: −17 dB", "Metal 0.90: +25 dB",
+                 "6 more metal detections within 2 cells: +10 dB", "9 cells in this area"]}
   ]
 }
 ```
@@ -216,9 +230,9 @@ Every mission with a GPS anchor, newest first, for the theatre map. Missions wit
   "mission": MissionSummary,
   "geo": GeoAnchor,
   "current": {"x": 3, "y": 1} | null,
-  "cells": [[3, 2, "soil", 0.82, 0.07, 4]],
+  "cells": [[3, 2, "soil", 0.82, 0.07, 0.76]],
   // [x, y, succeeded material label or null, strongest metal 0..1, strongest voc 0..1,
-  //  risk rank: 0 none, 1 low, 2 medium, 3 high, 4 extremely high, -1 not assessed]
+  //  risk heat: P(hazard), half P for an activity cue, 0 no indication, -1 not assessed]
   "risk": {"verdict": "no_go", "verdict_reasons": [...], "areas": [RiskArea without cells, plus "size"]}
 } ] }
 ```

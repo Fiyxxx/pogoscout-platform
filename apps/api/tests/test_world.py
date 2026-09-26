@@ -18,9 +18,10 @@ def test_world_lists_anchored_missions_with_compact_cells(client) -> None:
     entry = world[0]
     assert entry["geo"] == geo
     assert entry["current"] == {"x": 1, "y": 1}
-    # [x, y, material, strongest metal, strongest voc, risk rank]: metal beside VOC is extremely
-    # high (4); VOC alone is a recent activity cue, high (3). Both fall in one area.
-    assert sorted(entry["cells"]) == [[0, 1, None, 1.0, 0, 4], [1, 1, None, 0, 1.0, 3]]
+    # [x, y, material, strongest metal, strongest voc, risk heat]. Metal 1.0 beside VOC:
+    # -17 + 25 + 8 = +16 dB, P 0.98. VOC alone is an activity cue: -15 + 22 = +7 dB, P 0.83,
+    # weighted half. Both fall in one area.
+    assert sorted(entry["cells"]) == [[0, 1, None, 1.0, 0, 0.98], [1, 1, None, 0, 1.0, 0.415]]
     assert entry["risk"]["verdict"] == "no_go"
     [area] = entry["risk"]["areas"]
     assert (area["id"], area["kind"], area["level"], area["size"]) == ("A1", "explosive", "EH", 2)

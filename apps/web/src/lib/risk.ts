@@ -1,6 +1,7 @@
-// Risk assessment, rules `risk-1`. A line-for-line port of apps/api/src/pogoscout_api/domain/risk.py
-// so the mission page can assess any moment of playback. Both run contracts/risk.v1.cases.json.
-// All arithmetic is on integer hundredths so the two implementations agree exactly.
+// Risk assessment, rules `risk-2` (Bayesian evidence fusion). A line-for-line port of
+// apps/api/src/pogoscout_api/domain/risk.py, so the mission page can assess any moment of playback.
+// Both run contracts/risk.v2.cases.json. Evidence is integer decibans and probabilities integer
+// hundredths, so the two implementations agree exactly. See the Python module for the model.
 
 import type { Cell, SensorReading } from '../api/types'
 
@@ -13,7 +14,11 @@ export type CellRisk = {
   y: number
   assessed: boolean
   kind: RiskKind | null
-  score: number
+  /** Posterior log odds in decibans. */
+  db: number
+  /** Posterior probability in hundredths. */
+  p: number
+  /** Likelihood grade A to E on the risk matrix. */
   probability: string | null
   severity: string | null
   level: RiskLevel | null
@@ -30,7 +35,7 @@ export type RiskArea = {
   cells: [number, number][]
   centroid: [number, number]
   peak: [number, number]
-  score: number
+  p: number
   reasons: string[]
 }
 
@@ -47,9 +52,10 @@ export type RiskAssessment = {
 type Reading = [number | null, string]
 export type CellReadings = { x: number; y: number; metal: Reading[]; voc: Reading[] }
 
-export const RULES_VERSION = 'risk-1'
+export const RULES_VERSION = 'risk-2'
 const SIGNAL = 30
 const DETECTED = 50
+const SUSPECTED = 15
 export const PROBABILITY = ['A', 'B', 'C', 'D', 'E'] as const
 export const SEVERITY = ['I', 'II', 'III', 'IV'] as const
 export const PROBABILITY_NAMES = ['Frequent', 'Likely', 'Occasional', 'Seldom', 'Unlikely']
@@ -66,82 +72,122 @@ export const LEVEL_COLORS: Record<RiskLevel, string> = { EH: 'var(--risk-eh)', H
 export const VERDICT_NAMES: Record<Verdict, string> = { go: 'Go', caution: 'Caution', no_go: 'No-go' }
 const AREA_LEVELS: RiskLevel[] = ['EH', 'H', 'M']
 
+// Priors [share of cells, decibans] and sensor models [lowest signal, P | hypothesis, P | not, dB].
+export const HAZARD_PRIOR = [0.02, -17] as const
+export const ACTIVITY_PRIOR = [0.03, -15] as const
+type Model = readonly (readonly [number, number, number, number])[]
+export const METAL_MODEL: Model = [
+  [85, 0.15, 0.0005, 25],
+  [70, 0.25, 0.0015, 22],
+  [50, 0.3, 0.008, 16],
+  [30, 0.15, 0.04, 6],
+  [0, 0.15, 0.95, -8],
+]
+export const VOC_MODEL: Model = [
+  [85, 0.15, 0.001, 22],
+  [70, 0.2, 0.002, 20],
+  [50, 0.25, 0.007, 16],
+  [30, 0.2, 0.035, 8],
+  [0, 0.2, 0.955, -7],
+]
+const VOC_NEARBY_DB = 8
+const METAL_PATTERN_DB = 10
+const DB_LIMIT = 60
+
 /** 0..1 to 0..100, half away from zero, identical to the Python rules. */
 export const hundredths = (value: number) => Math.floor(value * 100 + 0.5)
 const floorDiv = (a: number, b: number) => Math.floor(a / b)
 const fmt = (h: number) => `${floorDiv(h, 100)}.${String(((h % 100) + 100) % 100).padStart(2, '0')}`
+export const signed = (db: number) => (db > 0 ? `+${db} dB` : db < 0 ? `\u2212${-db} dB` : '0 dB')
 const ok = (readings: Reading[]) => readings.filter(([v, s]) => s === 'ok' && v !== null).map(([v]) => hundredths(v as number))
 const max = (values: number[]) => (values.length ? Math.max(...values) : 0)
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 const key = (x: number, y: number) => `${x},${y}`
 
-export function probability(score: number): string {
-  for (const [threshold, grade] of [[90, 'A'], [75, 'B'], [60, 'C'], [50, 'D']] as const) if (score >= threshold) return grade
+/** Probability in hundredths as text; never shows certainty the evidence cannot give. */
+export const probText = (p: number) => (p >= 100 ? '>0.99' : p <= 0 ? '<0.01' : (p / 100).toFixed(2))
+
+/** Log odds in decibans to probability in hundredths. */
+export const posterior = (db: number) => hundredths(1 / (1 + 10 ** (-db / 10)))
+
+export function grade(p: number): string {
+  for (const [threshold, letter] of [[80, 'A'], [50, 'B'], [25, 'C'], [15, 'D']] as const) if (p >= threshold) return letter
   return 'E'
 }
 
-function repeat(values: number[], sensor: string): [number, string | null] {
-  const n = values.length
-  if (n < 2) return [0, null]
-  const hits = values.filter((v) => v >= SIGNAL).length
-  if (hits < n) return [-10, `${sensor} on ${hits} of ${n} visits`]
-  if (Math.min(...values) >= DETECTED) return [10, `${sensor} confirmed on all ${n} visits`]
-  return [0, `${sensor} on all ${n} visits`]
+function weight(model: Model, value: number): number {
+  for (const [lowest, , , db] of model) if (value >= lowest) return db
+  throw new Error(`no bin for ${value}`)
+}
+
+/** Evidence from every visit: the strongest reading in full, each further visit half. */
+function visits(values: number[], sensor: string, model: Model): [number, string[]] {
+  let total = 0
+  const lines: string[] = []
+  ;[...values]
+    .sort((a, b) => b - a)
+    .forEach((value, i) => {
+      let db = weight(model, value)
+      if (i === 0) lines.push(`${sensor} ${fmt(value)}: ${signed(db)}`)
+      else {
+        db = floorDiv(db, 2)
+        lines.push(`${sensor} ${fmt(value)} on revisit: ${signed(db)}`)
+      }
+      total += db
+    })
+  return [total, lines]
 }
 
 function assessCell(cell: CellReadings, metalMax: Map<string, number>, vocMax: Map<string, number>): CellRisk {
   const metal = ok(cell.metal)
   const voc = ok(cell.voc)
   const { x, y } = cell
-  const none = { kind: null, score: 0, probability: null, severity: null, level: null, label: null }
+  const none = { kind: null, db: 0, p: 0, probability: null, severity: null, level: null, label: null }
   if (!metal.length) {
     const failed = cell.metal.some(([, s]) => s === 'error')
     return { x, y, assessed: false, ...none, reasons: [failed ? 'Metal sensor error' : 'No metal reading'] }
   }
-  const m = max(metal)
-  const v = max(voc)
-  const reasons: string[] = []
   let kind: RiskKind
   let severity: string
-  let score: number
-  if (m >= SIGNAL) {
+  let db: number
+  let reasons: string[]
+  if (max(metal) >= SIGNAL) {
     kind = 'explosive'
     severity = 'I'
-    score = m
-    reasons.push(`Metal signal ${fmt(m)}`)
-    const [change, why] = repeat(metal, 'Metal')
-    score += change
-    if (why) reasons.push(why)
+    db = HAZARD_PRIOR[1]
+    reasons = [`Prior ${Math.round(HAZARD_PRIOR[0] * 100)}% of cells: ${signed(db)}`]
+    const [evidence, lines] = visits(metal, 'Metal', METAL_MODEL)
+    db += evidence
+    reasons.push(...lines)
     let near = 0
     for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) near = Math.max(near, vocMax.get(key(x + dx, y + dy)) ?? 0)
     if (near >= DETECTED) {
-      score += 10
-      reasons.push(`VOC ${fmt(near)} at or beside this cell`)
+      db += VOC_NEARBY_DB
+      reasons.push(`VOC ${fmt(near)} at or beside this cell: ${signed(VOC_NEARBY_DB)}`)
     }
     let pattern = 0
     for (let dx = -2; dx <= 2; dx++)
       for (let dy = -2; dy <= 2; dy++) if ((dx || dy) && (metalMax.get(key(x + dx, y + dy)) ?? 0) >= DETECTED) pattern++
     if (pattern >= 2) {
-      score += 10
-      reasons.push(`${pattern} more metal hits within 2 cells`)
+      db += METAL_PATTERN_DB
+      reasons.push(`${pattern} more metal detections within 2 cells: ${signed(METAL_PATTERN_DB)}`)
     }
-  } else if (v >= SIGNAL) {
+  } else if (voc.length && max(voc) >= SIGNAL) {
     kind = 'activity'
     severity = 'III'
-    score = v
-    reasons.push(`VOC signal ${fmt(v)}`)
-    const [change, why] = repeat(voc, 'VOC')
-    score += change
-    if (why) reasons.push(why)
-    reasons.push('No metal signal')
+    db = ACTIVITY_PRIOR[1]
+    const [evidence, lines] = visits(voc, 'VOC', VOC_MODEL)
+    db += evidence
+    reasons = [`Prior ${Math.round(ACTIVITY_PRIOR[0] * 100)}% of cells: ${signed(ACTIVITY_PRIOR[1])}`, ...lines, 'No metal signal']
   } else {
-    return { x, y, assessed: true, ...none, score: Math.max(m, v), reasons: [] }
+    return { x, y, assessed: true, ...none, reasons: [] }
   }
-  score = Math.max(0, Math.min(100, score))
-  const grade = probability(score)
-  const level = MATRIX[severity][PROBABILITY.indexOf(grade as (typeof PROBABILITY)[number])]
-  const label = kind === 'explosive' ? (score >= DETECTED ? 'Suspected explosive hazard' : 'Metal anomaly') : 'Recent activity cue'
-  return { x, y, assessed: true, kind, score, probability: grade, severity, level, label, reasons }
+  db = Math.max(-DB_LIMIT, Math.min(DB_LIMIT, db))
+  const p = posterior(db)
+  const letter = grade(p)
+  const level = MATRIX[severity][PROBABILITY.indexOf(letter as (typeof PROBABILITY)[number])]
+  const label = kind === 'explosive' ? (p >= SUSPECTED ? 'Suspected explosive hazard' : 'Metal anomaly') : 'Recent activity cue'
+  return { x, y, assessed: true, kind, db, p, probability: letter, severity, level, label, reasons }
 }
 
 const ACTIONS = {
@@ -152,7 +198,7 @@ const ACTIONS = {
 
 function areasOf(risks: CellRisk[]): RiskArea[] {
   const members = new Map<string, CellRisk>()
-  for (const r of risks) if (r.level && AREA_LEVELS.includes(r.level) && r.score >= DETECTED) members.set(key(r.x, r.y), r)
+  for (const r of risks) if (r.level && AREA_LEVELS.includes(r.level) && r.p >= SUSPECTED) members.set(key(r.x, r.y), r)
   const seen = new Set<string>()
   const groups: CellRisk[][] = []
   const starts = [...members.values()].sort((a, b) => a.y - b.y || a.x - b.x)
@@ -181,8 +227,8 @@ function areasOf(risks: CellRisk[]): RiskArea[] {
   const areas = groups.map((group): RiskArea => {
     const kind: RiskKind = group.some((r) => r.kind === 'explosive') ? 'explosive' : 'activity'
     const peak = group.reduce((best, r) => {
-      const a = [RANK[r.level!], r.score, -r.y, -r.x]
-      const b = [RANK[best.level!], best.score, -best.y, -best.x]
+      const a = [RANK[r.level!], r.p, -r.y, -r.x]
+      const b = [RANK[best.level!], best.p, -best.y, -best.x]
       for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i] ? r : best
       return best
     })
@@ -202,11 +248,11 @@ function areasOf(risks: CellRisk[]): RiskArea[] {
       cells: group.map((r) => [r.x, r.y]),
       centroid: [cx / 100, cy / 100],
       peak: [peak.x, peak.y],
-      score: peak.score,
+      p: peak.p,
       reasons,
     }
   })
-  areas.sort((a, b) => RANK[b.level] - RANK[a.level] || b.score - a.score || a.peak[1] - b.peak[1] || a.peak[0] - b.peak[0])
+  areas.sort((a, b) => RANK[b.level] - RANK[a.level] || b.p - a.p || a.peak[1] - b.peak[1] || a.peak[0] - b.peak[0])
   return areas.map((a, i) => ({ ...a, id: `A${i + 1}` }))
 }
 
@@ -233,7 +279,7 @@ export function assess(input: CellReadings[]): RiskAssessment {
   if (severe) reasons.push(plural(severe, 'suspected explosive hazard', 'suspected explosive hazards'))
   if (anomalies) reasons.push(`${plural(anomalies, 'metal anomaly area', 'metal anomaly areas')} to re-survey`)
   if (activity) reasons.push(plural(activity, 'recent activity area', 'recent activity areas'))
-  if (loose) reasons.push(`${plural(loose, 'weak metal reading', 'weak metal readings')} to re-survey`)
+  if (loose) reasons.push(`${plural(loose, 'metal anomaly', 'metal anomalies')} to re-survey`)
   if (missing) reasons.push(`${missingPct}% of surveyed cells not assessed`)
   const verdict: Verdict = severe ? 'no_go' : anomalies || activity || loose || missingPct >= 5 ? 'caution' : 'go'
   if (!reasons.length) reasons.push('No indications in surveyed cells')

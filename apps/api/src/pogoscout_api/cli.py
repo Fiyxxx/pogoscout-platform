@@ -36,7 +36,7 @@ def export_contracts() -> None:
         json.dumps(taxonomy, indent=2) + "\n"
     )
     cases = risk_cases.build()
-    (CONTRACTS_DIR / "risk.v1.cases.json").write_text(json.dumps(cases, indent=2) + "\n")
+    (CONTRACTS_DIR / "risk.v2.cases.json").write_text(json.dumps(cases, indent=2) + "\n")
     print(f"wrote contracts to {CONTRACTS_DIR}")
 
 

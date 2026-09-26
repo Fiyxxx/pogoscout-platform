@@ -436,9 +436,10 @@ _world_cache: dict[str, tuple[Fingerprint, JSONDict]] = {}
 def world(session: Session) -> JSONDict:
     """Every GPS-anchored mission with its compact cells, for the theatre map.
 
-    A cell is `[x, y, material label or null, metal signal 0..1, voc signal 0..1, risk rank]`,
-    where signals are the strongest valid reading and the risk rank is 0 none, 1 low, 2 medium,
-    3 high, 4 extremely high, -1 not assessed. Each mission also carries its verdict and areas.
+    A cell is `[x, y, material label or null, metal signal 0..1, voc signal 0..1, risk heat]`,
+    where signals are the strongest valid reading and risk heat is the posterior probability of a
+    hazard (half the probability for an activity cue), 0 with no indication, -1 not assessed.
+    Each mission also carries its verdict and areas.
     """
     all_missions = session.scalars(select(MissionRow).order_by(MissionRow.created_at.desc()))
     rows = [m for m in all_missions if m.geo]
@@ -449,10 +450,7 @@ def world(session: Session) -> JSONDict:
         if cached is None or cached[0] != prints[mission.id]:
             document = json.loads(cells_json(session, mission.id))
             assessment = risk_json(session, mission.id)
-            ranks = {
-                (r["x"], r["y"]): risk_rules.RANK[r["level"]] if r["assessed"] else -1
-                for r in assessment["cells"]
-            }
+            heat = {(r["x"], r["y"]): risk_rules.heat_weight(r) for r in assessment["cells"]}
             compact = {
                 "current": document["current"] if document["path"] else None,
                 "cells": [
@@ -462,7 +460,7 @@ def world(session: Session) -> JSONDict:
                         c["material"]["label"] if c["material"]["status"] == "succeeded" else None,
                         _strongest(c, "metal"),
                         _strongest(c, "voc"),
-                        ranks.get((c["x"], c["y"]), 0),
+                        heat.get((c["x"], c["y"]), 0),
                     ]
                     for c in document["cells"]
                 ],
