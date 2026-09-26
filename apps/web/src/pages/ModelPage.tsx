@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavTabs } from '../components/NavTabs'
 import { TopBar } from '../components/TopBar'
 import type { ModelScene } from '../features/model/modelScene'
-import { AIRFRAME, BAYS, bayOf, DEFAULT_VARIANTS, EMPTY, type Module, PARTS, type PartId, partNumber, type SlotId } from '../features/model/parts'
+import { AIRFRAME, BAYS, bayOf, DEFAULT_VARIANTS, EMPTY, LOADOUTS, type Module, MOUNTS, PARTS, type PartId, partNumber, type SlotId } from '../features/model/parts'
 
 /** Presentation page: an explorable line drawing of the PogoScout and its swappable modules. */
 export function ModelPage() {
@@ -51,7 +51,6 @@ export function ModelPage() {
   const bay = bayOf(selected)
   const fittedModule = bay?.modules.find((m) => m.id === variants[bay.id])
   const fitted = BAYS.filter((b) => variants[b.id] !== EMPTY).length
-  const isStandard = BAYS.every((b) => variants[b.id] === DEFAULT_VARIANTS[b.id])
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -76,28 +75,32 @@ export function ModelPage() {
             <span>Sensor payload</span>
             <span className="mono" style={{ fontSize: 11 }}>{fitted} of {BAYS.length} bays fitted</span>
           </div>
-          <p style={{ margin: '0 20px 8px', fontSize: 12, color: 'var(--m-muted)', lineHeight: 1.5 }}>
-            Every bay takes any of its modules on the same mount and connector. Swap in the field, no tools.
+          <p style={{ margin: '0 20px 10px', fontSize: 12, color: 'var(--m-muted)', lineHeight: 1.5 }}>
+            Sensors ride on the pogo leg. One mount and connector per bay, swapped in the field without tools.
           </p>
-          <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column' }}>
-            {BAYS.map((b) => {
-              const mod = b.modules.find((m) => m.id === variants[b.id])
+          <div className="model-loadouts" role="group" aria-label="Loadout">
+            {LOADOUTS.map((l) => {
+              const on = BAYS.every((b) => variants[b.id] === l.variants[b.id])
               return (
-                <PartRow key={b.id} id={b.id} name={b.name} selected={selected} hovered={hovered} onChoose={choose}>
-                  {mod ? (
-                    <span className="model-fit">{mod.name}</span>
-                  ) : (
-                    <span className="model-fit" data-empty="true">Add</span>
-                  )}
-                </PartRow>
+                <button key={l.id} aria-pressed={on} title={l.summary} onClick={() => refit({ ...l.variants })}>
+                  {l.name}
+                </button>
               )
             })}
           </div>
-          <div style={{ padding: '10px 20px 0' }}>
-            <button className="model-link" disabled={isStandard} onClick={() => refit({ ...DEFAULT_VARIANTS })}>
-              Reset to standard payload
-            </button>
-          </div>
+          {MOUNTS.map((mount) => (
+            <div key={mount.id} style={{ padding: '0 8px', display: 'flex', flexDirection: 'column' }}>
+              <div className="model-zone">{mount.name}</div>
+              {BAYS.filter((b) => b.mount === mount.id).map((b) => {
+                const mod = b.modules.find((m) => m.id === variants[b.id])
+                return (
+                  <PartRow key={b.id} id={b.id} name={b.name} selected={selected} hovered={hovered} onChoose={choose}>
+                    {mod ? <span className="model-fit">{mod.name}</span> : <span className="model-fit" data-empty="true">Add</span>}
+                  </PartRow>
+                )
+              })}
+            </div>
+          ))}
           <p style={{ margin: '12px 20px 0', paddingTop: 12, borderTop: '1px solid var(--m-line)', fontSize: 12, color: 'var(--m-muted)' }}>
             Drag to rotate, scroll to zoom. Click any part to take it apart.
           </p>
@@ -118,11 +121,17 @@ export function ModelPage() {
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
               </button>
             </div>
-            {fittedModule && <Spec module={fittedModule} />}
+            {bay && <Spec module={fittedModule} mount={MOUNTS.find((m) => m.id === bay.mount)!.name} />}
             <div>
               <div style={{ fontSize: 12, color: 'var(--m-muted)', marginBottom: 6 }}>How it works</div>
               <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{part.how}</p>
             </div>
+            {bay && (
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--m-muted)', marginBottom: 6 }}>Why it sits here</div>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{bay.placement}</p>
+              </div>
+            )}
             {bay && (
               <div>
                 <div style={{ fontSize: 12, color: 'var(--m-muted)', marginBottom: 8 }}>Modules for this bay</div>
@@ -187,8 +196,10 @@ function PartRow(props: {
 }
 
 /** The fitted module's real component, key figure and interface. */
-function Spec({ module: m }: { module: Module }) {
-  const rows: [string, string][] = [['Fitted', m.name], ['Part', m.part], ['Spec', m.spec], ['Interface', m.iface]]
+function Spec({ module: m, mount }: { module?: Module; mount: string }) {
+  const rows: [string, string][] = m
+    ? [['Fitted', m.name], ['Part', m.part], ['Spec', m.spec], ['Interface', m.iface], ['Mount', mount]]
+    : [['Fitted', 'Empty'], ['Mount', mount]]
   return (
     <dl className="model-spec">
       {rows.map(([k, v]) => (

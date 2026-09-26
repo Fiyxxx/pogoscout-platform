@@ -100,7 +100,7 @@ input::placeholder { color: var(--faint); }
 /* 3D showcase: ink on paper */
 .model-page { --m-paper: #f4f4f1; --m-ink: #151515; --m-muted: #6b6b66; --m-line: #d9d9d4; background: var(--m-paper); color: var(--m-ink); }
 .model-panel { position: absolute; background: rgba(255, 255, 255, 0.92); border: 1px solid var(--m-line); backdrop-filter: blur(6px); }
-.model-part { display: flex; align-items: center; gap: 12px; padding: 7px 12px; border: none; background: transparent; color: var(--m-ink); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 0.15s ease; }
+.model-part { display: flex; align-items: center; gap: 12px; padding: 5px 12px; border: none; background: transparent; color: var(--m-ink); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 0.15s ease; }
 .model-part:hover, .model-part[data-hover='true'] { background: #efefeb; }
 .model-part[data-active='true'] { background: var(--m-ink); color: #ffffff; }
 .model-variant { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; border: 1px solid var(--m-line); background: #ffffff; color: var(--m-ink); transition: border-color 0.15s ease; }
@@ -112,6 +112,11 @@ input::placeholder { color: var(--faint); }
 .model-btn { border: 1px solid var(--m-line); }
 .model-seg button[aria-pressed='true'], .model-btn[aria-pressed='true'] { background: var(--m-ink); color: #ffffff; }
 .model-section { padding: 14px 20px 6px; font-size: 12px; color: var(--m-muted); }
+.model-zone { padding: 8px 12px 2px; font-size: 11px; color: var(--m-muted); }
+.model-loadouts { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 20px 6px; }
+.model-loadouts button { padding: 4px 8px; border: 1px solid var(--m-line); background: #ffffff; color: var(--m-ink); font-size: 12px; }
+.model-loadouts button:hover { border-color: var(--m-ink); }
+.model-loadouts button[aria-pressed='true'] { background: var(--m-ink); border-color: var(--m-ink); color: #ffffff; }
 .model-fit { font-size: 12px; color: var(--m-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 .model-fit[data-empty='true'] { color: var(--signal); }
 .model-part[data-active='true'] .model-fit { color: #bdbdb8; }

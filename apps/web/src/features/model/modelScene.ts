@@ -219,7 +219,7 @@ export class ModelScene {
   private newPart(id: PartId): PartBuild {
     const group = new THREE.Group()
     group.userData.part = id
-    if (id !== 'leg' && id !== 'metal' && id !== 'seismic') group.position.y = LIFT
+    if (id !== 'leg' && id !== 'metal' && id !== 'seismic' && id !== 'environment') group.position.y = LIFT
     this.root.add(group)
     const index = PARTS.findIndex((p) => p.id === id)
     const el = document.createElement('div')
@@ -421,15 +421,15 @@ export class ModelScene {
   }
 
   private slotExplode: Record<SlotId, THREE.Vector3Tuple> = {
-    camera: [0, -0.45, 1.25],
+    camera: [0, -0.35, 1.3],
     metal: [-1.25, -0.35, 0],
-    gas: [1.25, 0.05, 0],
+    gas: [1.35, -0.1, 0.2],
     datalink: [-0.55, 1.0, -0.55],
-    lidar: [-0.35, -0.55, -1.2],
-    environment: [-1.3, 0.3, 0.35],
-    acoustic: [0.6, 1.0, 0.6],
+    lidar: [0, -0.35, -1.3],
+    environment: [-0.8, -0.9, 0.9],
+    acoustic: [0.9, -0.3, 1.1],
     seismic: [1.0, -0.9, -0.6],
-    radiation: [0.55, -0.15, -1.3],
+    radiation: [-1.35, -0.1, -0.2],
     rf: [0.95, 0.8, -0.8],
   }
 
@@ -454,9 +454,10 @@ export class ModelScene {
     const line = (...pts: THREE.Vector3Tuple[]) => this.polyline(part, pts.map((q) => new THREE.Vector3(...q)))
 
     if (slot === 'camera') {
-      g.position.set(0, 0.95, 0.52)
-      g.add(this.solid(part, box(0.36, 0.03, 0.08), [0, 0.1, -0.02]))
-      for (const s of [-1, 1]) g.add(this.screw(part, [s * 0.13, 0.117, -0.02]))
+      // Front of the leg carriage, bolted to the bracket, looking down at the landing spot.
+      g.position.set(0, 0.6, 0.3)
+      g.add(this.solid(part, box(0.4, 0.03, 0.18), [0, 0.1, -0.1]))
+      for (const s of [-1, 1]) g.add(this.screw(part, [s * 0.17, 0.117, -0.15]))
       if (v === 'rgb' || v === 'nir') {
         g.add(this.solid(part, prism(roundedRect(0.3, 0.24, 0.03), 0.18), [0, 0, 0]))
         g.add(this.solid(part, cyl(0.08, 0.04, 18), [0, -0.11, 0.02], [0, 0, 0], 1))
@@ -513,9 +514,16 @@ export class ModelScene {
         for (const [x, z] of [[-0.42, -0.28], [0.42, -0.28], [-0.42, 0.28], [0.42, 0.28]]) g.add(this.screw(part, [x, 0.226, z]))
       }
     } else if (slot === 'gas') {
-      g.position.set(0.8, 1.2, 0)
+      // Right side of the leg carriage, with a sample line down the leg to an inlet at the foot.
+      g.position.set(0.3, 0.8, 0)
       g.add(this.solid(part, box(0.04, 0.2, 0.2), [-0.13, 0, 0]))
       for (const y of [-0.06, 0.06]) g.add(this.screw(part, [-0.105, y, 0.06], 'x', 0.016))
+      const foot = 0.34 - LIFT - 0.8 // the inlet height, in this module's frame
+      g.add(line([0, -0.18, 0.05], [0.02, -0.4, 0.07], [0.02, foot + 0.2, 0.07], [-0.06, foot + 0.05, 0], [-0.1, foot, -0.03]))
+      g.add(this.solid(part, cyl(0.05, 0.035, 14), [-0.3, foot, 0], [0, 0, 0], 1))
+      g.add(this.solid(part, box(0.14, 0.02, 0.04), [-0.2, foot, -0.03]))
+      g.add(this.solid(part, cyl(0.022, 0.07, 10), [-0.1, foot - 0.02, -0.03], [0, 0, 0], 1))
+      g.add(this.circle(part, 0.014, foot - 0.056, 10, -0.1, -0.03))
       if (v === 'voc') {
         g.add(this.solid(part, cyl(0.12, 0.3, 18), [0, -0.02, 0], [0, 0, 0], 1))
         for (const y of [-0.12, -0.07, -0.02, 0.03, 0.08]) g.add(this.circle(part, 0.123, y, 24))
@@ -569,8 +577,9 @@ export class ModelScene {
       }
     } else if (slot === 'lidar') {
       // Under the core, behind the leg, looking down.
-      g.position.set(-0.26, 0.95, -0.44)
-      g.add(this.solid(part, box(0.3, 0.03, 0.22), [0, 0.1, 0]))
+      // Under the back of the leg carriage, looking down and ahead.
+      g.position.set(0, 0.6, -0.3)
+      g.add(this.solid(part, box(0.3, 0.03, 0.3), [0, 0.1, 0.05]))
       for (const s of [-1, 1]) g.add(this.screw(part, [s * 0.11, 0.117, 0]))
       if (v === 'tfluna') {
         g.add(this.solid(part, box(0.2, 0.1, 0.12), [0, 0.03, 0]))
@@ -591,29 +600,30 @@ export class ModelScene {
         g.add(this.solid(part, cyl(0.1, 0.02, 24), [0, -0.145, 0], [0, 0, 0], 1))
       }
     } else if (slot === 'environment') {
-      // Left side of the core, mirroring the gas bay.
-      g.position.set(-0.8, 1.2, 0)
-      g.add(this.solid(part, box(0.04, 0.2, 0.2), [0.13, 0, 0]))
-      for (const y of [-0.06, 0.06]) g.add(this.screw(part, [0.105, y, 0.06], 'x', 0.016))
+      // On a short arm at the foot, reading the air just above the ground.
+      const a = 1.75
+      g.rotation.y = -a // local +x points out along the arm
+      g.add(this.solid(part, cyl(0.05, 0.035, 14), [0, 0.37, 0], [0, 0, 0], 1))
+      g.add(this.solid(part, box(0.16, 0.02, 0.04), [0.11, 0.37, 0]))
       if (v === 'sht45') {
         // Louvred radiation shield: stacked plates around a central post.
-        g.add(this.solid(part, box(0.14, 0.03, 0.04), [0.05, 0.14, 0]))
-        g.add(this.solid(part, cyl(0.015, 0.34, 8), [-0.05, 0, 0], [0, 0, 0], 1))
-        for (let k = 0; k < 6; k++) g.add(this.solid(part, cyl(0.11 - (k === 0 ? 0 : 0.01), 0.015, 20), [-0.05, 0.14 - k * 0.055, 0], [0, 0, 0], 1))
+        g.add(this.solid(part, cyl(0.01, 0.16, 8), [0.24, 0.34, 0], [0, 0, 0], 1))
+        for (let k = 0; k < 4; k++) g.add(this.solid(part, cyl(k === 0 ? 0.065 : 0.058, 0.012, 18), [0.24, 0.41 - k * 0.035, 0], [0, 0, 0], 1))
       } else if (v === 'bme280') {
-        g.add(this.solid(part, box(0.14, 0.2, 0.18), [0, 0, 0]))
-        for (const z of [-0.05, 0, 0.05]) g.add(this.outline(part, [[-0.071, -0.07, z - 0.012], [-0.071, -0.07, z + 0.012], [-0.071, 0.07, z + 0.012], [-0.071, 0.07, z - 0.012]]))
+        g.add(this.solid(part, box(0.08, 0.1, 0.08), [0.23, 0.36, 0]))
+        for (const z of [-0.02, 0.02]) g.add(this.outline(part, [[0.271, 0.33, z - 0.008], [0.271, 0.33, z + 0.008], [0.271, 0.39, z + 0.008], [0.271, 0.39, z - 0.008]]))
       } else {
         // Particle counter: fan-driven box with inlet and outlet.
-        g.add(this.solid(part, box(0.18, 0.2, 0.3), [-0.02, 0, 0]))
-        g.add(this.outline(part, [[-0.111, -0.05, -0.12], [-0.111, -0.05, -0.04], [-0.111, 0.05, -0.04], [-0.111, 0.05, -0.12]]))
-        g.add(this.circle(part, 0.045, 0.101, 18, -0.02, 0.07))
-        g.add(this.outline(part, [[-0.111, -0.06, 0.03], [-0.111, -0.06, 0.12], [-0.111, -0.03, 0.12], [-0.111, -0.03, 0.03]]))
+        g.add(this.solid(part, box(0.1, 0.12, 0.16), [0.24, 0.37, 0]))
+        g.add(this.circle(part, 0.03, 0.431, 16, 0.24, 0.03))
+        g.add(this.outline(part, [[0.291, 0.34, -0.06], [0.291, 0.34, -0.01], [0.291, 0.39, -0.01], [0.291, 0.39, -0.06]]))
       }
     } else if (slot === 'acoustic') {
       // Front-right of the lid, clear of the rotors' downwash as far as the frame allows.
-      g.position.set(0.42, 1.52, 0.42)
-      g.add(this.solid(part, cyl(0.06, 0.02, 14), [0, 0.01, 0], [0, 0, 0], 1))
+      // Hung under the end of the carriage bracket arm, below the rotor plane.
+      g.position.set(0.17, 0.91, 0.56)
+      g.rotation.x = Math.PI
+      g.add(this.solid(part, cyl(0.045, 0.02, 14), [0, 0.01, 0], [0, 0, 0], 1))
       if (v === 'mic') {
         g.add(this.solid(part, cyl(0.015, 0.22, 8), [0, 0.13, 0], [0, 0, 0], 1))
         g.add(this.solid(part, new THREE.IcosahedronGeometry(0.08, 1), [0, 0.3, 0], [0, 0, 0], 12))
@@ -647,7 +657,9 @@ export class ModelScene {
       }
     } else if (slot === 'radiation') {
       // Back face of the core, beside the connector.
-      g.position.set(0.4, 1.2, -0.8)
+      // Left side of the leg carriage: the lowest point isolated from landing shock.
+      g.position.set(-0.3, 0.8, 0)
+      g.rotation.y = Math.PI / 2
       g.add(this.solid(part, box(0.2, 0.2, 0.04), [0, 0, 0.13]))
       for (const x of [-0.06, 0.06]) g.add(this.screw(part, [x, 0.06, 0.105], 'z', 0.016))
       if (v === 'bg51') {
