@@ -9,10 +9,13 @@ type Props = {
   data: CellsResponse
   layer: Layer
   selected: string | null
-  onSelect: (key: string) => void
+  /** A click on the map: the cell under the pointer, or null for empty ground. */
+  onPick: (key: string | null) => void
   risk: RiskAssessment
   area: string | null
   onArea: (id: string | null) => void
+  /** The hazard area the camera is focused on, if any. */
+  focus: string | null
 }
 
 // Checked once per page load. The probe context is released straight away: browsers cap the
@@ -31,7 +34,7 @@ function webglSupported(): boolean {
   return webgl
 }
 
-export default function MissionMap({ data, layer, selected, onSelect, risk, area, onArea }: Props) {
+export default function MissionMap({ data, layer, selected, onPick, risk, area, onArea, focus }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<MissionScene | null>(null)
   const drag = useRef<{ x: number; y: number; moved: boolean; pan: boolean } | null>(null)
@@ -100,11 +103,14 @@ export default function MissionMap({ data, layer, selected, onSelect, risk, area
   }, [])
   const hoveredArea = risk.areas.find((a) => a.id === hovered)
 
-  // Fly to an area when it is chosen, from a hotspot or from the list.
+  // Fly in when an area is focused, from a hotspot or the list; zoom back out when focus ends.
+  const wasFocused = useRef(false)
   useEffect(() => {
-    const chosen = latest.current.risk.areas.find((a) => a.id === area)
+    const chosen = latest.current.risk.areas.find((a) => a.id === focus)
     if (chosen) sceneRef.current?.focus(cellKey({ x: chosen.peak[0], y: chosen.peak[1] }))
-  }, [area])
+    else if (wasFocused.current) sceneRef.current?.recenter()
+    wasFocused.current = !!chosen
+  }, [focus])
   useEffect(() => sceneRef.current?.setOptions({ layer, view, metric, selected }), [layer, view, metric, selected])
 
   useEffect(() => {
@@ -142,10 +148,7 @@ export default function MissionMap({ data, layer, selected, onSelect, risk, area
           d.y = e.clientY
         }}
         onPointerUp={(e) => {
-          if (drag.current && !drag.current.moved) {
-            const key = sceneRef.current?.pick(e.clientX, e.clientY)
-            if (key) onSelect(key)
-          }
+          if (drag.current && !drag.current.moved) onPick(sceneRef.current?.pick(e.clientX, e.clientY) ?? null)
           drag.current = null
         }}
         onWheel={(e) => sceneRef.current?.zoomBy(e.deltaY)}

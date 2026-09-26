@@ -212,6 +212,8 @@ export class MissionScene {
   private target = new THREE.Vector3()
   private targetGoal = new THREE.Vector3()
   private autoFrame = true
+  // Centre of the mission extent, where recenter returns the camera.
+  private home = new THREE.Vector3()
   private framed = false
   private cam = { phi: VIEW_ANGLES['3d'].phi, theta: VIEW_ANGLES['3d'].theta, r: 16 }
   private camGoal = { ...this.cam }
@@ -402,6 +404,7 @@ export class MissionScene {
     const angles = VIEW_ANGLES[this.options.view]
     this.zoom = 1
     this.autoFrame = true
+    this.targetGoal.copy(this.home)
     this.camGoal.phi = angles.phi
     this.camGoal.theta = nearAngle(angles.theta, this.cam.theta)
   }
@@ -606,8 +609,9 @@ export class MissionScene {
     const cy = (min_y + max_y) / 2
     const span = Math.max(max_x - min_x + 1, max_y - min_y + 1, 4)
     this.baseRadius = 5 + span * 1.45
+    this.home.set(cx, 0, -cy)
     if (this.autoFrame) {
-      this.targetGoal.set(cx, 0, -cy)
+      this.targetGoal.copy(this.home)
       if (!this.framed) this.target.copy(this.targetGoal)
       this.framed = true
     }
