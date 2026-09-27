@@ -77,7 +77,7 @@ def make_demo(tmp_path: Path, ground: FakeGround) -> Iterator[Callable[..., Test
     clients: list[TestClient] = []
 
     def factory(**overrides) -> TestClient:
-        values = {"ground_enabled": True, "ground_hop_interval_s": 3600.0, **overrides}
+        values = {"ground_hop_interval_s": 3600.0, **overrides}
         client = GroundClient("http://ground.test", transport=httpx.MockTransport(ground.handler))
         app = create_app(make_settings(tmp_path, **values), ground_client=client)
         test_client = TestClient(app)
@@ -92,25 +92,33 @@ def make_demo(tmp_path: Path, ground: FakeGround) -> Iterator[Callable[..., Test
 
 @pytest.fixture
 def demo(make_demo) -> TestClient:
-    return make_demo()
+    """A platform with one session, created the way the demo page does."""
+    client = make_demo()
+    new_session(client)
+    return client
 
 
 def runner(client: TestClient) -> GroundDemo:
     return client.app.state.ctx.ground  # type: ignore[attr-defined]
 
 
-def start_time(client: TestClient) -> float:
-    run = runner(client)._run
-    assert run is not None
-    return run.started_at
-
-
-def tick(client: TestClient, at: float) -> int:
-    return asyncio.run(runner(client).tick(at))
+def new_session(client: TestClient, **body) -> dict:
+    response = client.post("/api/v1/ground-demo/sessions", json=body or None)
+    assert response.status_code == 201
+    return response.json()
 
 
 def mission_id(client: TestClient) -> str:
-    return client.get("/api/v1/ground-demo").json()["mission_id"]
+    """The newest session."""
+    return client.get("/api/v1/ground-demo").json()["sessions"][0]["mission_id"]
+
+
+def start_time(client: TestClient, mid: str | None = None) -> float:
+    return runner(client)._runs[mid or mission_id(client)].started_at
+
+
+def tick(client: TestClient, at: float, mid: str | None = None) -> int:
+    return asyncio.run(runner(client).tick(mid or mission_id(client), at))
 
 
 def events(client: TestClient, mid: str, kind: str) -> list[dict]:
@@ -321,45 +329,143 @@ def test_failed_row_keeps_the_response_without_the_image(demo, ground):
     assert "image_jpeg_b64" not in row.raw_response
 
 
-# Start and stop ------------------------------------------------------------------------------
+# Sessions ------------------------------------------------------------------------------------
 
 
-def test_start_stop_and_restart(demo):
-    state = demo.get("/api/v1/ground-demo").json()
-    assert state["running"] is True  # started with the platform
-    assert state["ground"] == "ok"
-    assert state["ground_model_version"] == MODEL
-    assert state["interval_s"] == 3600.0
-    first = state["mission_id"]
-    assert first.startswith("GD-")
-    mission = demo.get(f"/api/v1/missions/{first}").json()
-    assert (mission["status"], mission["source"]) == ("live", "hardware")
-    assert mission["name"].startswith("Ground demo ")
-
-    assert demo.post("/api/v1/ground-demo/start").status_code == 409
-
-    stopped = demo.post("/api/v1/ground-demo/stop").json()
-    assert (stopped["running"], stopped["mission_id"]) == (False, first)
-    assert demo.get(f"/api/v1/missions/{first}").json()["status"] == "complete"
-    with pytest.raises(Exception, match="no ground demo is running"):
-        tick(demo, 0)
-
-    restarted = demo.post("/api/v1/ground-demo/start")
-    assert restarted.status_code == 200
-    second = restarted.json()["mission_id"]
-    assert second != first  # each start makes a new mission, even within the same second
-    assert demo.get(f"/api/v1/missions/{second}").json()["status"] == "live"
-    assert restarted.json()["hops"] == 0
-
-
-def test_shutdown_leaves_the_mission_live(make_demo):
+def test_nothing_polls_until_a_session_is_created(make_demo, ground):
     client = make_demo()
-    mid = mission_id(client)
+    assert client.get("/api/v1/ground-demo").json() == {
+        "interval_s": 3600.0,
+        "ground": "ok",
+        "ground_model_version": MODEL,
+        "sessions": [],
+    }
+    assert client.get("/api/v1/missions").json() == []
+    assert ground.latest_calls == 0
+    assert "ground" not in client.get("/api/v1/health").json()
+
+
+def test_create_and_stop_sessions(make_demo):
+    client = make_demo()
+    first = new_session(client)
+    assert first["mission_id"].startswith("GD-")
+    assert (first["status"], first["running"], first["hops"]) == ("live", True, 0)
+    assert first["name"].startswith("Ground demo ")
+    mission = client.get(f"/api/v1/missions/{first['mission_id']}").json()
+    assert (mission["status"], mission["source"]) == ("live", "hardware")
+
+    second = new_session(client, name="  Car park  ")
+    assert second["mission_id"] != first["mission_id"]  # a new mission, even within the second
+    assert second["name"] == "Car park"
+    sessions = client.get("/api/v1/ground-demo").json()["sessions"]
+    assert [s["mission_id"] for s in sessions] == [second["mission_id"], first["mission_id"]]
+    assert all(s["running"] for s in sessions)
+
+    stopped = client.post(f"/api/v1/ground-demo/sessions/{first['mission_id']}/stop").json()
+    assert (stopped["status"], stopped["running"]) == ("complete", False)
+    assert client.get(f"/api/v1/missions/{first['mission_id']}").json()["status"] == "complete"
+    with pytest.raises(Exception, match="is not running"):
+        tick(client, 0, first["mission_id"])
+    assert runner(client).running(second["mission_id"])  # the other session keeps polling
+
+    again = client.post(f"/api/v1/ground-demo/sessions/{first['mission_id']}/stop")
+    assert again.status_code == 200  # stopping an ended session is a no-op
+    assert client.post("/api/v1/ground-demo/sessions/nope/stop").status_code == 404
+
+
+def test_only_demo_missions_are_sessions(make_demo):
+    client = make_demo()
+    client.post("/api/v1/missions", json={"name": "Survey", "mission_id": "m-1"})
+    assert client.get("/api/v1/ground-demo").json()["sessions"] == []
+    assert client.post("/api/v1/ground-demo/sessions/m-1/stop").status_code == 404
+    assert client.get("/api/v1/missions/m-1").json()["status"] == "live"
+
+
+def test_sessions_poll_on_their_own_clocks(demo, ground):
+    first = mission_id(demo)
+    second = new_session(demo)["mission_id"]
+    t0 = start_time(demo, first)
+    ground.reading("sand", 0.9, captured_at=t0 + 1)
+    tick(demo, t0 + 2, first)
+    tick(demo, t0 + 4, first)
+    tick(demo, t0 + 3, second)
+    by_id = {s["mission_id"]: s for s in demo.get("/api/v1/ground-demo").json()["sessions"]}
+    assert (by_id[first]["hops"], by_id[second]["hops"]) == (2, 1)
+    assert ground.latest_calls == 3
+    # Stale marks are per session: the second session's first hop is fresh.
+    assert demo.get(f"/api/v1/ground-demo/{second}/hops").json()[0]["stale"] is False
+    assert demo.get(f"/api/v1/ground-demo/{first}/hops").json()[0]["stale"] is True
+
+
+def test_rename_a_session(demo):
+    mid = mission_id(demo)
+    renamed = demo.patch(f"/api/v1/ground-demo/sessions/{mid}", json={"name": "  Back lawn "})
+    assert renamed.status_code == 200
+    assert (renamed.json()["name"], renamed.json()["running"]) == ("Back lawn", True)
+    assert demo.get(f"/api/v1/missions/{mid}").json()["name"] == "Back lawn"
+
+    for name in ("", "   "):
+        response = demo.patch(f"/api/v1/ground-demo/sessions/{mid}", json={"name": name})
+        assert response.status_code == 422
+    assert demo.patch("/api/v1/ground-demo/sessions/nope", json={"name": "x"}).status_code == 404
+
+
+def test_delete_a_running_session_removes_everything(demo, ground):
+    mid = mission_id(demo)
+    other = new_session(demo)["mission_id"]
+    t0 = start_time(demo, mid)
+    ground.reading("gravel", 0.9, captured_at=t0 + 1)
+    tick(demo, t0 + 2, mid)
+    tick(demo, t0 + 3, other)
+    ctx = demo.app.state.ctx  # type: ignore[attr-defined]
+    assert (ctx.store.root / mid).is_dir()
+
+    assert demo.delete(f"/api/v1/ground-demo/sessions/{mid}").status_code == 204
+    assert not runner(demo).running(mid)
+    assert demo.get(f"/api/v1/missions/{mid}").status_code == 404
+    assert [s["mission_id"] for s in demo.get("/api/v1/ground-demo").json()["sessions"]] == [other]
+    assert not (ctx.store.root / mid).exists()
+    with ctx.db.session_scope() as session:
+        from pogoscout_api.persistence.db import (
+            ClassificationRow,
+            EventRow,
+            HopRow,
+            ImageRow,
+        )
+
+        for row in (ClassificationRow, EventRow, HopRow, ImageRow):
+            count = session.scalar(
+                select(func.count()).select_from(row).where(row.mission_id == mid)
+            )
+            assert count == 0, row.__tablename__
+    # The other session is untouched and keeps polling.
+    assert demo.get(f"/api/v1/ground-demo/{other}/hops").json()[0]["label"] == "gravel"
+    assert runner(demo).running(other)
+    assert demo.delete(f"/api/v1/ground-demo/sessions/{mid}").status_code == 404
+
+
+def test_only_demo_missions_can_be_renamed_or_deleted(make_demo):
+    client = make_demo()
+    client.post("/api/v1/missions", json={"name": "Survey", "mission_id": "m-1"})
+    assert client.patch("/api/v1/ground-demo/sessions/m-1", json={"name": "x"}).status_code == 404
+    assert client.delete("/api/v1/ground-demo/sessions/m-1").status_code == 404
+    assert client.get("/api/v1/missions/m-1").json()["name"] == "Survey"
+
+
+def test_shutdown_leaves_sessions_live_and_listed(make_demo):
+    client = make_demo()
+    mid = new_session(client)["mission_id"]
     client.__exit__(None, None, None)
     with client.app.state.ctx.db.session_scope() as session:  # type: ignore[attr-defined]
         from pogoscout_api.persistence.db import MissionRow
 
         assert session.get(MissionRow, mid).status == "live"
+
+    restarted = make_demo()  # the same database
+    (listed,) = restarted.get("/api/v1/ground-demo").json()["sessions"]
+    assert (listed["mission_id"], listed["status"], listed["running"]) == (mid, "live", False)
+    ended = restarted.post(f"/api/v1/ground-demo/sessions/{mid}/stop").json()
+    assert ended["status"] == "complete"
 
 
 def test_ground_offline_is_reported(demo, ground):
@@ -368,34 +474,18 @@ def test_ground_offline_is_reported(demo, ground):
     assert demo.get("/api/v1/ground-demo").json()["ground"] == "offline"
 
 
-def test_disabled_demo_starts_nothing(make_demo, ground):
-    client = make_demo(ground_enabled=False)
-    assert client.get("/api/v1/ground-demo").json() == {
-        "running": False,
-        "mission_id": None,
-        "hops": 0,
-        "interval_s": 3600.0,
-        "ground": "off",
-        "ground_model_version": None,
-    }
-    response = client.post("/api/v1/ground-demo/start")
-    assert response.status_code == 409
-    assert "off" in response.json()["detail"]
-    assert client.get("/api/v1/missions").json() == []
-    assert ground.latest_calls == 0
-    assert "ground" not in client.get("/api/v1/health").json()
-
-
 def test_clock_ticks_on_its_own(make_demo, ground):
     client = make_demo(ground_hop_interval_s=0.05)
-    ground.reading(captured_at=start_time(client))
+    mid = new_session(client)["mission_id"]
+    run = runner(client)._runs[mid]
+    ground.reading(captured_at=run.started_at)
     for _ in range(100):
-        if runner(client)._run.hops >= 3:  # type: ignore[union-attr]
+        if run.hops >= 3:
             break
         asyncio.run(asyncio.sleep(0.05))
-    client.post("/api/v1/ground-demo/stop")
-    assert runner(client)._run.hops >= 3  # type: ignore[union-attr]
-    assert ground.latest_calls == runner(client)._run.hops  # type: ignore[union-attr]
+    client.post(f"/api/v1/ground-demo/sessions/{mid}/stop")
+    assert run.hops >= 3
+    assert ground.latest_calls == run.hops
 
 
 # Through the existing endpoints --------------------------------------------------------------

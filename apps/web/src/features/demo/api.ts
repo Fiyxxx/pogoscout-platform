@@ -1,17 +1,25 @@
 // Live ground demo endpoints (docs/API.md, "Live ground demo"). Kept out of api/client.ts: only
 // the demo page uses them.
 import { API_BASE, ApiError, keys } from '../../api/client'
-import type { ClassificationStatus } from '../../api/types'
+import type { ClassificationStatus, MissionStatus } from '../../api/types'
 
-export type GroundService = 'off' | 'ok' | 'offline'
+export type GroundService = 'ok' | 'offline'
+
+/** One demo run: a live mission the platform makes hops for while `running`. */
+export type GroundSession = {
+  mission_id: string
+  name: string
+  status: MissionStatus
+  running: boolean // false for a session left live by a platform restart
+  hops: number
+  created_at: string
+}
 
 export type GroundDemoState = {
-  running: boolean
-  mission_id: string | null
-  hops: number
   interval_s: number
   ground: GroundService
   ground_model_version: string | null
+  sessions: GroundSession[] // newest first
 }
 
 export type GroundHop = {
@@ -30,19 +38,27 @@ export type GroundHop = {
   image_url: string | null
 }
 
-async function call<T>(path: string, method: 'GET' | 'POST' = 'GET'): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { method })
+async function call<T>(path: string, method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET', body?: unknown): Promise<T> {
+  const init: RequestInit = { method }
+  if (body !== undefined) {
+    init.headers = { 'Content-Type': 'application/json' }
+    init.body = JSON.stringify(body)
+  }
+  const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     throw new ApiError(res.status, typeof body?.detail === 'string' ? body.detail : res.statusText)
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
 export const demoApi = {
   state: () => call<GroundDemoState>('/ground-demo'),
-  start: () => call<GroundDemoState>('/ground-demo/start', 'POST'),
-  stop: () => call<GroundDemoState>('/ground-demo/stop', 'POST'),
+  create: (name?: string) => call<GroundSession>('/ground-demo/sessions', 'POST', { name: name || null }),
+  stop: (missionId: string) => call<GroundSession>(`/ground-demo/sessions/${missionId}/stop`, 'POST'),
+  rename: (missionId: string, name: string) => call<GroundSession>(`/ground-demo/sessions/${missionId}`, 'PATCH', { name }),
+  remove: (missionId: string) => call<void>(`/ground-demo/sessions/${missionId}`, 'DELETE'),
   hops: (missionId: string, limit = 10) => call<GroundHop[]>(`/ground-demo/${missionId}/hops?limit=${limit}`),
 }
 

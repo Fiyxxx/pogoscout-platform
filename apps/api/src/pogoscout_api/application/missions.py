@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from pogoscout_api.application import events, positions
@@ -10,7 +10,15 @@ from pogoscout_api.application.notify import Notifier, NullNotifier
 from pogoscout_api.domain.geo import GeoAnchor
 from pogoscout_api.domain.hops import HopPayload, HopSource
 from pogoscout_api.domain.projection import PlacedHop
-from pogoscout_api.persistence.db import HopRejectionRow, HopRow, MissionRow
+from pogoscout_api.persistence.db import (
+    ClassificationRow,
+    EventRow,
+    HopRejectionRow,
+    HopRow,
+    ImageRow,
+    InferenceJobRow,
+    MissionRow,
+)
 
 MissionStatus = Literal["live", "complete", "aborted"]
 NULL_NOTIFIER = NullNotifier()
@@ -70,6 +78,22 @@ def get_mission(session: Session, mission_id: str) -> MissionRow:
 def list_missions(session: Session) -> list[MissionRow]:
     query = select(MissionRow).order_by(MissionRow.created_at.desc(), MissionRow.id.desc())
     return list(session.scalars(query))
+
+
+def delete_mission(session: Session, mission_id: str) -> None:
+    """Delete a mission and every row that belongs to it. The caller removes its image files
+    and commits."""
+    get_mission(session, mission_id)
+    for row in (
+        ClassificationRow,
+        InferenceJobRow,
+        ImageRow,
+        EventRow,
+        HopRejectionRow,
+        HopRow,
+    ):
+        session.execute(delete(row).where(row.mission_id == mission_id))
+    session.execute(delete(MissionRow).where(MissionRow.id == mission_id))
 
 
 def set_status(

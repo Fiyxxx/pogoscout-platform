@@ -26,8 +26,6 @@ def create_app(
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         if config.worker_enabled:
             ctx.worker.start()
-        if config.ground_enabled:
-            await ctx.ground.start()
         try:
             yield
         finally:

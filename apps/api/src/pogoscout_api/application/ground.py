@@ -1,9 +1,10 @@
 """Live ground demo: the platform plays the drone, using the ground-classification service.
 
-Each tick fetches the service's latest reading once, makes one hop on a lawnmower path through
-the same service as the HTTP endpoint, and records the reading as that hop's image and
-classification. There are no retries: a later fetch would describe different ground. A reading
-the service has not replaced since the previous tick is stored as stale rather than dropped.
+The demo page creates sessions; each is a live mission with its own clock. Each tick fetches the
+service's latest reading once, makes one hop on a lawnmower path through the same service as the
+HTTP endpoint, and records the reading as that hop's image and classification. There are no
+retries: a later fetch would describe different ground. A reading the service has not replaced
+since the previous tick is stored as stale rather than dropped.
 
 The demo has no VOC or metal sensor, so both are recorded as missing, never as a clean 0.
 """
@@ -19,7 +20,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from pogoscout_api.adapters.ground import (
@@ -57,16 +58,26 @@ PRODUCER_ID = "ground-demo"
 LANE_CELLS = 8
 MISSING = SensorReading(value=None, status="missing")
 
-GroundStatus = Literal["off", "ok", "offline"]
+MISSION_PREFIX = "GD-"
+SESSION_LIST_LIMIT = 20
+
+GroundStatus = Literal["ok", "offline"]
+
+
+class GroundSession(BaseModel):
+    mission_id: str
+    name: str
+    status: str  # the mission's status: live, complete or aborted
+    running: bool  # polling the ground service now; a live session is idle after a restart
+    hops: int
+    created_at: datetime
 
 
 class GroundDemoState(BaseModel):
-    running: bool
-    mission_id: str | None
-    hops: int
     interval_s: float
     ground: GroundStatus
     ground_model_version: str | None
+    sessions: list[GroundSession]  # newest first, at most SESSION_LIST_LIMIT
 
 
 class GroundHop(BaseModel):
@@ -174,35 +185,69 @@ class GroundDemo:
         self.config = config
         self.notifier = notifier
         self.client = client
-        self._run: _Run | None = None  # the current run, or the last one once stopped
+        self._runs: dict[str, _Run] = {}  # the sessions polling now, by mission id
         self._lock = threading.Lock()  # one tick records at a time
 
     # State ---------------------------------------------------------------------------------
 
-    @property
-    def running(self) -> bool:
-        return self._run is not None and self._run.running
+    def running(self, mission_id: str) -> bool:
+        run = self._runs.get(mission_id)
+        return run is not None and run.running
 
     async def state(self) -> GroundDemoState:
-        if self.config.ground_enabled:
-            ground, model_version = await self.client.health()
-        else:
-            ground, model_version = "off", None
-        run = self._run
+        ground, model_version = await self.client.health()
+        with self.db.session_scope() as session:
+            sessions = self._sessions(session)
         return GroundDemoState(
-            running=self.running,
-            mission_id=run.mission_id if run else None,
-            hops=run.hops if run else 0,
             interval_s=self.config.ground_hop_interval_s,
             ground=ground,
             ground_model_version=model_version,
+            sessions=sessions,
         )
+
+    def _sessions(self, session: Session, mission_id: str | None = None) -> list[GroundSession]:
+        """Demo missions from the database, so sessions from before a restart still show."""
+        query = select(MissionRow).where(MissionRow.id.startswith(MISSION_PREFIX, autoescape=True))
+        if mission_id is not None:
+            query = query.where(MissionRow.id == mission_id)
+        rows = list(
+            session.scalars(
+                query.order_by(MissionRow.created_at.desc(), MissionRow.id.desc()).limit(
+                    SESSION_LIST_LIMIT
+                )
+            )
+        )
+        counts = dict(
+            session.execute(
+                select(HopRow.mission_id, func.count())
+                .where(HopRow.mission_id.in_([r.id for r in rows]))
+                .group_by(HopRow.mission_id)
+            ).all()
+        )
+        return [
+            GroundSession(
+                mission_id=row.id,
+                name=row.name,
+                status=row.status,
+                running=self.running(row.id),
+                hops=counts.get(row.id, 0),
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    def session(self, mission_id: str) -> GroundSession:
+        with self.db.session_scope() as session:
+            found = self._sessions(session, mission_id)
+        if not found:
+            raise missions.NotFound(f"ground demo session {mission_id} not found")
+        return found[0]
 
     # Start and stop ------------------------------------------------------------------------
 
-    def _create_mission(self, now: float) -> str:
+    def _create_mission(self, now: float, name: str | None) -> str:
         local = datetime.fromtimestamp(now)
-        base = f"GD-{local:%Y%m%d-%H%M%S}"
+        base = f"{MISSION_PREFIX}{local:%Y%m%d-%H%M%S}"
         with self.db.session_scope() as session:
             for suffix in ("", *(f"-{n}" for n in range(2, 100))):
                 mission_id = base + suffix
@@ -210,47 +255,68 @@ class GroundDemo:
                     break
             missions.create_mission(
                 session,
-                f"Ground demo {local:%H:%M:%S}",
+                name or f"Ground demo {local:%H:%M:%S}",
                 "hardware",
                 mission_id,
                 notifier=self.notifier,
             )
         return mission_id
 
-    def begin(self, now: float | None = None) -> str:
-        """Create a new live mission and make it the current run, without the clock. Tests call
-        this and then `tick` directly; `start` also runs the clock."""
-        if not self.config.ground_enabled:
-            raise missions.Conflict("the ground demo is off (set POGOSCOUT_GROUND_ENABLED=true)")
-        if self.running:
-            raise missions.Conflict(f"ground demo {self._run.mission_id} is already running")
+    def begin(self, name: str | None = None, now: float | None = None) -> str:
+        """Create a new live mission and a run for it, without the clock. Tests call this and
+        then `tick` directly; `start` also runs the clock."""
         now = time.time() if now is None else now
-        mission_id = self._create_mission(now)
-        self._run = _Run(mission_id=mission_id, started_at=now, last_tick_at=now)
+        mission_id = self._create_mission(now, name)
+        self._runs[mission_id] = _Run(mission_id=mission_id, started_at=now, last_tick_at=now)
         return mission_id
 
-    async def start(self) -> GroundDemoState:
-        """Start a new run. Must be called from the event loop."""
-        self.begin()
-        run = self._run
-        assert run is not None
-        run.task = asyncio.create_task(self._loop(run), name=f"ground-demo-{run.mission_id}")
-        return await self.state()
+    async def start(self, name: str | None = None) -> GroundSession:
+        """Create a session and start polling for it. Must be called from the event loop."""
+        mission_id = self.begin(name)
+        run = self._runs[mission_id]
+        run.task = asyncio.create_task(self._loop(run), name=f"ground-demo-{mission_id}")
+        return self.session(mission_id)
 
-    async def stop(self) -> GroundDemoState:
-        """Stop the current run and mark its mission complete. A no-op when nothing runs."""
-        run = self._run
-        if run is not None and run.running:
+    async def stop(self, mission_id: str) -> GroundSession:
+        """Stop polling for a session and mark its mission complete. Also ends a session left
+        live by a restart. A no-op on a session that has already ended."""
+        self.session(mission_id)  # 404 unless it is a demo session
+        run = self._runs.pop(mission_id, None)
+        if run is not None:
             await self._cancel(run)
-            with self.db.session_scope() as session:
-                if missions.get_mission(session, run.mission_id).status == "live":
-                    missions.set_status(session, run.mission_id, "complete", notifier=self.notifier)
-        return await self.state()
+        with self.db.session_scope() as session:
+            if missions.get_mission(session, mission_id).status == "live":
+                missions.set_status(session, mission_id, "complete", notifier=self.notifier)
+        return self.session(mission_id)
+
+    def rename(self, mission_id: str, name: str) -> GroundSession:
+        name = name.strip()
+        if not name:
+            raise missions.Invalid("a session name can't be blank")
+        self.session(mission_id)  # 404 unless it is a demo session
+        with self.db.session_scope() as session:
+            missions.get_mission(session, mission_id).name = name
+            session.commit()
+        self.notifier.publish(mission_id, ["mission"])
+        return self.session(mission_id)
+
+    async def delete(self, mission_id: str) -> None:
+        """Stop polling for a session, then delete its mission, hops, readings and crops."""
+        self.session(mission_id)  # 404 unless it is a demo session
+        run = self._runs.pop(mission_id, None)
+        if run is not None:
+            await self._cancel(run)
+        with self._lock, self.db.session_scope() as session:
+            missions.delete_mission(session, mission_id)
+            session.commit()
+        self.store.remove_mission(mission_id)
+        self.notifier.publish(mission_id, ["mission", "cells", "events"])
 
     async def shutdown(self) -> None:
-        """Platform shutdown: stop the clock and leave the mission live, like a replay."""
-        if self._run is not None:
-            await self._cancel(self._run)
+        """Platform shutdown: stop every clock and leave the missions live, like a replay."""
+        runs, self._runs = list(self._runs.values()), {}
+        for run in runs:
+            await self._cancel(run)
 
     async def _cancel(self, run: _Run) -> None:
         run.running = False
@@ -275,17 +341,18 @@ class GroundDemo:
             if not run.running:
                 break
             try:
-                await self.tick()
-            except Exception:  # never let one bad tick end the demo
-                log.exception("ground demo tick failed")
+                await self.tick(run.mission_id)
+            except Exception:  # never let one bad tick end the session
+                log.exception("ground demo tick failed for %s", run.mission_id)
 
     # One tick ------------------------------------------------------------------------------
 
-    async def tick(self, at: float | None = None) -> int:
-        """Fetch once, ingest the next hop and attach the reading to it. Returns the hop id."""
-        run = self._run
+    async def tick(self, mission_id: str, at: float | None = None) -> int:
+        """Fetch once, ingest the session's next hop and attach the reading to it. Returns the
+        hop id. Each session fetches on its own clock, so its stale marks are its own."""
+        run = self._runs.get(mission_id)
         if run is None or not run.running:
-            raise missions.Conflict("no ground demo is running")
+            raise missions.Conflict(f"ground demo session {mission_id} is not running")
         at = time.time() if at is None else at
         outcome = await self._fetch()
         with self._lock, self.db.session_scope() as session:

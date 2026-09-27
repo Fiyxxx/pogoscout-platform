@@ -241,7 +241,7 @@ Every mission with a GPS anchor, newest first, for the theatre map. Missions wit
 
 ## Live ground demo
 
-Off unless `POGOSCOUT_GROUND_ENABLED=true`. The platform plays the drone: every `ground_hop_interval_s` (2 s) it fetches the ground-classification service's `GET /latest` once (`contracts/ground-latest.v1.openapi.yaml`), ingests the next hop through the same service as `PUT /hops`, and attaches the reading to it. Hops follow a lawnmower path (8 cells east, then a step north and 7 back, alternating), `source` is `hardware`, `producer_id` is `ground-demo`, and both sensors are `{"value": null, "status": "missing"}`: the demo has no VOC or metal sensor, so there is no risk assessment. With the demo on, a run starts with the platform, in a new mission `GD-<YYYYMMDD-HHMMSS>`.
+The demo page creates sessions; each is a `live` mission `GD-<YYYYMMDD-HHMMSS>` with its own clock, and several can run at once. Nothing polls the ground service until a session exists. For each running session the platform plays the drone: every `ground_hop_interval_s` (2 s) it fetches the ground-classification service's `GET /latest` once (`contracts/ground-latest.v1.openapi.yaml`), ingests the next hop through the same service as `PUT /hops`, and attaches the reading to it. Hops follow a lawnmower path (8 cells east, then a step north and 7 back, alternating), `source` is `hardware`, `producer_id` is `ground-demo`, and both sensors are `{"value": null, "status": "missing"}`: the demo has no VOC or metal sensor, so there is no risk assessment.
 
 Each hop gets exactly one classification row, with no retries (a later fetch would describe different ground):
 
@@ -251,14 +251,24 @@ Each hop gets exactly one classification row, with no retries (a later fetch wou
 
 ### `GET /ground-demo` → `GroundDemoState`
 ```jsonc
-{ "running": true, "mission_id": "GD-20260927-101500" | null, "hops": 42, "interval_s": 2.0,
-  "ground": "off" | "ok" | "offline", "ground_model_version": "clip-vit-base-patch32+prompts-3f9a2c1d" | null }
+{ "interval_s": 2.0, "ground": "ok" | "offline",
+  "ground_model_version": "clip-vit-base-patch32+prompts-3f9a2c1d" | null,
+  "sessions": [ GroundSession ] }   // newest first, at most 20
+// GroundSession
+{ "mission_id": "GD-20260927-101500", "name": "Ground demo 10:15:00",
+  "status": "live" | "complete" | "aborted",  // the mission's status
+  "running": true,                             // polling now
+  "hops": 42, "created_at": "..." }
 ```
-`ground` is `off` when the demo is off, otherwise the ground service's health (cached 10 s, refreshed by every fetch). After a stop, `mission_id` and `hops` describe the last run. The ground service's status is reported here, not in `/health`.
-### `POST /ground-demo/start` → `GroundDemoState`
-Starts a new run in a new `live` mission. 409 while a run is going, or when the demo is off.
-### `POST /ground-demo/stop` → `GroundDemoState`
-Stops the run and marks its mission `complete`. A no-op when nothing runs. On platform shutdown the mission is left `live`, like a replay; the next start makes a new mission.
+`ground` is the ground service's health (cached 10 s, refreshed by every fetch), reported here, not in `/health`. Sessions are read from the database, so they are still listed after a restart, with `running: false`.
+### `POST /ground-demo/sessions` → 201 `GroundSession`
+Body optional: `{"name": "Car park" | null}` (at most 200 characters; default `Ground demo HH:MM:SS`). Creates a new `live` mission and starts polling for it.
+### `POST /ground-demo/sessions/{mission_id}/stop` → `GroundSession`
+Stops polling and marks the mission `complete`. Also ends a session left `live` by a restart; a no-op on one already ended. 404 unless the mission is a demo session. On platform shutdown every session stops polling and its mission is left `live`, like a replay.
+### `PATCH /ground-demo/sessions/{mission_id}` → `GroundSession`
+Body `{"name": "Back lawn"}` (1 to 200 characters, trimmed). Renames the session and its mission, running or not. 422 on a blank name, 404 unless the mission is a demo session.
+### `DELETE /ground-demo/sessions/{mission_id}` → 204
+Stops polling if it still is, then deletes the mission with its hops, readings, events and stored crops. It can't be undone. 404 unless the mission is a demo session.
 ### `GET /ground-demo/{mission_id}/hops?limit=10` → `GroundHop[]` newest first
 ```jsonc
 { "hop_id": 42, "x": 6, "y": 5, "observed_at": "...",
