@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: PogoScout ground classification, latest reading
+  version: 1.0.0
+  description: >
+    Contract between pogoscout-platform (client) and pogodrone_ground_classification (server),
+    which classifies the Pi Camera stream with CLIP and serves its latest confident reading.
+    Neither repository imports the other. Both run on the same laptop and share a clock; the
+    server listens on 127.0.0.1 only, with no authentication. The platform's live ground demo
+    fetches /latest once per hop and never retries: a later fetch would describe different
+    ground. It checks the label is in the ground-v1 labels, the confidence is between 0 and 1,
+    captured_at is a number and the image decodes as a JPEG; any failed check is recorded as
+    `failed`. A 503, timeout or connection error is recorded as `unavailable`.
+servers:
+  - url: http://127.0.0.1:8765
+paths:
+  /latest:
+    get:
+      operationId: latest
+      responses:
+        "200":
+          description: >
+            The most recent confident reading. The label, confidence and image are stored
+            together, so they always come from the same frame. no_decision frames (blur, RF
+            noise, mixed ground) never replace it, so it can be old; see captured_at.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/LatestReading"}
+        "503":
+          description: No confident classification yet (the service has just started).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: {type: string, example: no confident classification yet}
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: Service running, whether or not it has a confident label yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, model_version]
+                properties:
+                  status: {type: string, const: ok}
+                  model_version: {type: string, example: clip-vit-base-patch32+prompts-3f9a2c1d}
+components:
+  schemas:
+    LatestReading:
+      type: object
+      required: [label, confidence, captured_at, age_s, model_version, image_jpeg_b64]
+      properties:
+        label:
+          type: string
+          description: One of the ground-v1 labels, the pogo-materials-v2 labels plus wood.
+          enum:
+            - soil
+            - mud
+            - sand
+            - gravel
+            - grass_vegetation
+            - leaf_litter
+            - concrete
+            - asphalt
+            - tiles_pavers
+            - water
+            - wood
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: >
+            Softmax probability of the label over the averaged label scores, calibrated so it
+            matches how often the label is right.
+        captured_at:
+          type: number
+          description: >
+            When the laptop received the frame, in Unix seconds. On a network stream this is the
+            arrival time, not the exposure time.
+        age_s: {type: number, minimum: 0, description: Seconds between captured_at and the response.}
+        model_version:
+          type: string
+          description: The model plus a short hash of the prompt set.
+          example: clip-vit-base-patch32+prompts-3f9a2c1d
+        image_jpeg_b64:
+          type: string
+          contentEncoding: base64
+          contentMediaType: image/jpeg
+          description: The landing-area crop the label was read from (about 435x432 px).
+      example:
+        label: gravel
+        confidence: 0.91
+        captured_at: 1790000000.123
+        age_s: 0.4
+        model_version: clip-vit-base-patch32+prompts-3f9a2c1d
+        image_jpeg_b64: /9j/4AAQSkZJRg...

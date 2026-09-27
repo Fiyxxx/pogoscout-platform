@@ -239,6 +239,36 @@ Every mission with a GPS anchor, newest first, for the theatre map. Missions wit
 ```
 `POST /replays` accepts an optional `geo`; without it the scenario's simulated start fix is used (`replay/sites.py`).
 
+## Live ground demo
+
+Off unless `POGOSCOUT_GROUND_ENABLED=true`. The platform plays the drone: every `ground_hop_interval_s` (2 s) it fetches the ground-classification service's `GET /latest` once (`contracts/ground-latest.v1.openapi.yaml`), ingests the next hop through the same service as `PUT /hops`, and attaches the reading to it. Hops follow a lawnmower path (8 cells east, then a step north and 7 back, alternating), `source` is `hardware`, `producer_id` is `ground-demo`, and both sensors are `{"value": null, "status": "missing"}`: the demo has no VOC or metal sensor, so there is no risk assessment. With the demo on, a run starts with the platform, in a new mission `GD-<YYYYMMDD-HHMMSS>`.
+
+Each hop gets exactly one classification row, with no retries (a later fetch would describe different ground):
+
+- A reading: the crop is stored as the hop's image (no inference job is queued) and a `succeeded` row records the label, confidence, `model_version`, `taxonomy_version: "ground-v1"` (the platform labels plus `wood`) and a `raw_response` with `captured_at`, `age_s` and `stale`. `stale` is true when the reading was captured before the previous tick, so the service had no new confident reading and the hop repeats it. Below 0.80 confidence it records `classification_low_confidence`.
+- A 503 (no confident label yet), timeout or connection error: an `unavailable` row with the reason.
+- A reading that fails a check (label not in ground-v1, confidence outside 0 to 1, non-numeric `captured_at`, an image that isn't a JPEG): a `failed` row, and no image.
+
+### `GET /ground-demo` → `GroundDemoState`
+```jsonc
+{ "running": true, "mission_id": "GD-20260927-101500" | null, "hops": 42, "interval_s": 2.0,
+  "ground": "off" | "ok" | "offline", "ground_model_version": "clip-vit-base-patch32+prompts-3f9a2c1d" | null }
+```
+`ground` is `off` when the demo is off, otherwise the ground service's health (cached 10 s, refreshed by every fetch). After a stop, `mission_id` and `hops` describe the last run. The ground service's status is reported here, not in `/health`.
+### `POST /ground-demo/start` → `GroundDemoState`
+Starts a new run in a new `live` mission. 409 while a run is going, or when the demo is off.
+### `POST /ground-demo/stop` → `GroundDemoState`
+Stops the run and marks its mission `complete`. A no-op when nothing runs. On platform shutdown the mission is left `live`, like a replay; the next start makes a new mission.
+### `GET /ground-demo/{mission_id}/hops?limit=10` → `GroundHop[]` newest first
+```jsonc
+{ "hop_id": 42, "x": 6, "y": 5, "observed_at": "...",
+  "status": "succeeded" | "unavailable" | "failed" | "none",  // none: the reading isn't attached yet
+  "label": "wood", "confidence": 0.91, "model_version": "...",
+  "captured_at": 1790000000.123, "age_s": 0.4, "stale": false,   // from raw_response; null on a failure
+  "error": null, "image_url": "/api/v1/missions/{id}/hops/42/image" | null }
+```
+`limit` is 1 to 100. Everything else comes from the existing endpoints: `/cells` for the map and `/hops/{hop_id}/image` for the crops.
+
 ## Health
 
 ### `GET /health` → `{"status": "ok", "classifier": "mock"|"http"|"disabled", "classifier_status": "ok"|"degraded"|"offline", "model_version": "material-model 0.3.0" | null}`

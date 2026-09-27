@@ -70,6 +70,28 @@ Small fixtures: `clean_baseline_v1`, `park_connector_v1`, `failures_v1`. Large f
 
 Fixtures are only ever ingested through the public API. `tests/test_fixtures.py` replays each small one and compares the result with `expected_projection.json`; `tests/test_large_fixtures.py` checks the large ones on a prefix, and in full with `uv run pytest --run-slow`.
 
+## Live ground demo
+
+A sandbox with real ground-classification data from [pogodrone_ground_classification](https://github.com/minweed/pogodrone_ground_classification), which classifies the Pi Camera stream with CLIP. The drone doesn't hop yet, so the platform plays it: every 2 s it moves one cell on a lawnmower path, fetches the ground service's latest confident label and the crop behind it, and records both as that hop. The **Live demo** tab shows the run as it happens: the current crop and label, a map of the materials seen so far, and the last 10 hops.
+
+```bash
+# terminal 1: the ground service, on the same laptop (it listens on 127.0.0.1:8765)
+cd ../pogodrone_ground_classification && ./run_pi.sh
+
+# terminal 2: the platform, with the demo on
+cd apps/api && POGOSCOUT_GROUND_ENABLED=true uv run pogoscout-api
+```
+
+Open http://localhost:5173/demo and move the camera over two or three surfaces. A run starts with the platform; Stop and Start make a new mission each time. What to expect:
+
+- Only the ground data is real. There is no VOC or metal sensor, so both are recorded as missing and there is no risk assessment. Demo missions also appear in the Missions list, where every cell's quality is `missing`.
+- Positions come from the demo's path, not from where the camera is.
+- A reading the ground service hasn't replaced since the last hop is marked stale. If the service is down or has no confident label yet, the hop still arrives, as `unavailable`, and readings resume once it's back.
+- The ground service adds `wood` to the 10 platform labels. Only the demo page names it; elsewhere a wood cell shows as unknown ground.
+- Until the ground service's confidence is calibrated (`calibrate_confidence.py` there), most readings score below 0.80 and show as low confidence.
+
+Settings are in `.env.example` (`POGOSCOUT_GROUND_*`). The endpoints are in [docs/API.md](docs/API.md#live-ground-demo), and the plan in [docs/GROUND_CLASSIFICATION_PLAN.md](docs/GROUND_CLASSIFICATION_PLAN.md).
+
 ## Test
 
 ```bash

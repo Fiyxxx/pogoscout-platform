@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from pogoscout_api.adapters.classifier import ClassifierClient
-from pogoscout_api.api import export_routes, replay_routes, routes, tile_routes
+from pogoscout_api.adapters.ground import GroundClient
+from pogoscout_api.api import export_routes, ground_routes, replay_routes, routes, tile_routes
 from pogoscout_api.api.schemas import HealthOut
 from pogoscout_api.config import Settings, settings
 from pogoscout_api.context import build_context
@@ -14,16 +15,23 @@ from pogoscout_api.live import ws
 from pogoscout_api.tiles.cache import TileCache
 
 
-def create_app(config: Settings = settings, classifier: ClassifierClient | None = None) -> FastAPI:
-    ctx = build_context(config, classifier)
+def create_app(
+    config: Settings = settings,
+    classifier: ClassifierClient | None = None,
+    ground_client: GroundClient | None = None,
+) -> FastAPI:
+    ctx = build_context(config, classifier, ground_client)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         if config.worker_enabled:
             ctx.worker.start()
+        if config.ground_enabled:
+            await ctx.ground.start()
         try:
             yield
         finally:
+            await ctx.ground.shutdown()
             await ctx.replay.shutdown()
             await ctx.worker.stop()
             await app.state.tiles.close()
@@ -52,6 +60,7 @@ def create_app(config: Settings = settings, classifier: ClassifierClient | None 
 
     app.include_router(routes.router)
     app.include_router(replay_routes.router)
+    app.include_router(ground_routes.router)
     app.include_router(export_routes.router)
     app.include_router(tile_routes.router)
     app.include_router(ws.router)
