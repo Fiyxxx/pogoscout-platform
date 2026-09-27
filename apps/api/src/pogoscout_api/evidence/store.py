@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -60,3 +61,6 @@ class ImageStore:
 
     def absolute(self, relative: str) -> Path:
         return self.root / relative
+
+    def remove_mission(self, mission_id: str) -> None:
+        shutil.rmtree(self.root / mission_id, ignore_errors=True)

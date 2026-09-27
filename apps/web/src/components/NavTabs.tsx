@@ -4,13 +4,14 @@ const TABS = [
   { to: '/', label: 'Theatre' },
   { to: '/missions', label: 'Missions' },
 ]
-// Presentation page, set apart from the operational tabs.
+// Presentation pages, set apart from the operational tabs.
 const SHOWCASE = { to: '/3d', label: '3D' }
+const DEMO = { to: '/demo', label: 'Live demo' }
 
 export function NavTabs() {
   return (
     <nav style={{ display: 'flex', gap: 4, fontSize: 14 }}>
-      {[...TABS, SHOWCASE].map((t) => (
+      {[...TABS, SHOWCASE, DEMO].map((t) => (
         <NavLink
           key={t.to}
           to={t.to}

@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 
 from pogoscout_api.adapters.classifier import ClassifierClient, build_classifier
+from pogoscout_api.adapters.ground import GroundClient
+from pogoscout_api.application.ground import GroundDemo
 from pogoscout_api.application.worker import InferenceWorker
 from pogoscout_api.config import Settings
 from pogoscout_api.evidence.store import ImageStore
@@ -20,9 +22,14 @@ class AppContext:
     classifier: ClassifierClient
     worker: InferenceWorker
     replay: ReplayManager
+    ground: GroundDemo
 
 
-def build_context(config: Settings, classifier: ClassifierClient | None = None) -> AppContext:
+def build_context(
+    config: Settings,
+    classifier: ClassifierClient | None = None,
+    ground_client: GroundClient | None = None,
+) -> AppContext:
     db = Database(config.database_url)
     db.create_all()
     store = ImageStore(config.image_dir)
@@ -30,4 +37,8 @@ def build_context(config: Settings, classifier: ClassifierClient | None = None) 
     classifier = classifier or build_classifier(config)
     worker = InferenceWorker(db, store, classifier, hub, config)
     replay = ReplayManager(db, store, config, hub)
-    return AppContext(config, db, store, hub, classifier, worker, replay)
+    ground_client = ground_client or GroundClient(
+        config.ground_service_url, config.ground_timeout_s
+    )
+    ground = GroundDemo(db, store, config, hub, ground_client)
+    return AppContext(config, db, store, hub, classifier, worker, replay, ground)

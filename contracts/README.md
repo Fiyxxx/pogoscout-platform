@@ -12,3 +12,6 @@ Published interfaces shared with other repositories. Nothing here imports code f
 - `ml-classify.v1.openapi.yaml`: `POST /api/v1/classify` contract with `pogoscout-material-model`.
 - `ml-classify.v1.example.json`: example request fields and response; a platform test validates it.
 - `taxonomy.pogo-materials-v2.json`: the 10 controlled material labels from the material model.
+- `ground-latest.v1.openapi.yaml`: `GET /latest` and `GET /health` of the ground-classification
+  service (`pogodrone_ground_classification`), read by the live ground demo. Its labels, `ground-v1`,
+  are the 10 above plus `wood`.

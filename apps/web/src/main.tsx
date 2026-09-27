@@ -8,6 +8,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { CellPage } from './pages/CellPage'
+import { DemoPage } from './pages/DemoPage'
 import { MissionPage } from './pages/MissionPage'
 import { MissionsPage } from './pages/MissionsPage'
 import { ModelPage } from './pages/ModelPage'
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
   { path: '/', element: <WorldPage /> },
   { path: '/missions', element: <MissionsPage /> },
   { path: '/3d', element: <ModelPage /> },
+  { path: '/demo', element: <DemoPage /> },
   { path: '/missions/:missionId', element: <MissionPage /> },
   { path: '/missions/:missionId/cells/:x/:y', element: <CellPage /> },
 ])
